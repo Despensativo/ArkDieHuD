@@ -15,6 +15,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 import urllib.request
 
 
@@ -242,23 +243,103 @@ def list_usbmux_udids(idevice_id_bin: str | None, network: bool = False) -> list
     return [line.strip() for line in res.stdout.splitlines() if line.strip()]
 
 
-def has_pymobiledevice3() -> bool:
+TCP_OSTRACE_SNIPPET = (
+    "import sys\n"
+    "from pymobiledevice3.lockdown import create_using_tcp\n"
+    "from pymobiledevice3.services.os_trace import OsTraceService\n"
+    "host = sys.argv[1]\n"
+    "udid = sys.argv[2] or None\n"
+    "ld = create_using_tcp(hostname=host, identifier=udid)\n"
+    "for entry in OsTraceService(ld).syslog():\n"
+    "    msg = getattr(entry, 'message', '') or ''\n"
+    "    if 'metal-HUD:' in msg:\n"
+    "        ts = getattr(entry, 'timestamp', None)\n"
+    "        tstr = ts.strftime('%H:%M:%S.%f') if ts else '00:00:00.000000'\n"
+    "        print(f'{tstr} {msg}', flush=True)\n"
+)
+
+
+def python_has_pymobiledevice3(py_bin: str) -> bool:
     try:
         res = subprocess.run(
-            [sys.executable, "-m", "pymobiledevice3", "version"],
+            [py_bin, "-c", "import pymobiledevice3"],
             capture_output=True,
             text=True,
-            timeout=3,
+            timeout=5,
         )
         return res.returncode == 0
     except Exception:
         return False
 
 
-def resolve_syslog_command(udid: str) -> list[str] | None:
+def find_pymobiledevice3_python() -> str | None:
+    candidates: list[str] = [
+        sys.executable,
+        os.path.expanduser("~/.arkdiehud-venv/bin/python3"),
+        os.path.expanduser("~/.sidejit/bin/python3"),
+    ]
+    pmd_cli = find_tool("pymobiledevice3")
+    if pmd_cli:
+        cli_dir = os.path.dirname(pmd_cli)
+        for py_name in ("python3", "python"):
+            candidates.append(os.path.join(cli_dir, py_name))
+        try:
+            with open(pmd_cli, "r", encoding="utf-8", errors="ignore") as f:
+                first_line = f.readline().strip()
+            if first_line.startswith("#!"):
+                shebang_py = first_line[2:].strip().split()[0]
+                if os.path.basename(shebang_py).lower().startswith("python"):
+                    candidates.append(shebang_py)
+        except Exception:
+            pass
+
+    seen = set()
+    for cand in candidates:
+        if not cand or cand in seen:
+            continue
+        seen.add(cand)
+        if os.path.isfile(cand) and os.access(cand, os.X_OK) and python_has_pymobiledevice3(cand):
+            return cand
+    return None
+
+
+def pick_venv_base_python() -> str:
+    for name in ("python3.14", "python3.13", "python3.12", "python3.11"):
+        found = find_tool(name)
+        if found:
+            return found
+    return sys.executable
+
+
+def ensure_pymobiledevice3_python() -> str | None:
+    existing = find_pymobiledevice3_python()
+    if existing:
+        return existing
+
+    venv_dir = os.path.expanduser("~/.arkdiehud-venv")
+    venv_py = os.path.join(venv_dir, "bin", "python3")
+    if os.path.isfile(venv_py) and os.access(venv_py, os.X_OK) and python_has_pymobiledevice3(venv_py):
+        return venv_py
+
+    base_py = pick_venv_base_python()
+    print(f"📦 Instalando pymobiledevice3 em {venv_dir} (apenas na primeira vez)...")
+    try:
+        subprocess.run([base_py, "-m", "venv", venv_dir], check=True, timeout=60)
+        subprocess.run(
+            [venv_py, "-m", "pip", "install", "--quiet", "pymobiledevice3"],
+            check=True,
+            timeout=180,
+        )
+    except Exception as exc:
+        print(f"⚠️  Falha ao instalar pymobiledevice3 automaticamente: {exc}")
+        return None
+
+    return venv_py if python_has_pymobiledevice3(venv_py) else None
+
+
+def resolve_syslog_command(udid: str, stream_web_url: str = "") -> list[str] | None:
     syslog_bin = find_tool("idevicesyslog")
     idevice_id_bin = find_tool("idevice_id")
-    usb_udids: list[str] = []
     if syslog_bin:
         if not idevice_id_bin:
             return [syslog_bin, "-u", udid]
@@ -269,10 +350,12 @@ def resolve_syslog_command(udid: str) -> list[str] | None:
         if udid in net_udids:
             return [syslog_bin, "-n", "-u", udid]
 
-    if has_pymobiledevice3():
-        if udid in usb_udids:
-            return [sys.executable, "-m", "pymobiledevice3", "syslog", "live", "--udid", udid]
-        return [sys.executable, "-m", "pymobiledevice3", "syslog", "live", "--mobdev2"]
+    pmd_py = ensure_pymobiledevice3_python()
+    if pmd_py:
+        host = (urllib.parse.urlparse(stream_web_url).hostname or "").strip()
+        if host and host not in ("localhost", "127.0.0.1", "::1"):
+            return [pmd_py, "-u", "-c", TCP_OSTRACE_SNIPPET, host, udid]
+        return [pmd_py, "-m", "pymobiledevice3", "syslog", "live", "--udid", udid]
     return None
 
 
@@ -324,7 +407,7 @@ def stream_metal_hud_to_web(
     max_seconds: float | None = None,
 ) -> None:
     endpoint = stream_web_url.rstrip("/") + "/api/metal-hud"
-    cmd = resolve_syslog_command(udid)
+    cmd = resolve_syslog_command(udid, stream_web_url)
     if not cmd:
         print("\n⚠️  Não foi possível capturar o syslog do iPhone/iPad para enviar FPS ao painel Web.")
         print("Como liberar o envio de FPS em tempo real:")
@@ -334,7 +417,7 @@ def stream_metal_hud_to_web(
         print("✅ O Metal HUD no aparelho continua ativo normalmente.")
         return
 
-    print(f"📡 Transmitindo FPS + VRAM + RAM para {endpoint} (Ctrl+C para encerrar)")
+    print(f"📡 Transmitindo FPS + VRAM + RAM para {endpoint} (Control+C para encerrar)")
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -350,11 +433,17 @@ def stream_metal_hud_to_web(
 
     prev_frame: int | None = None
     prev_ts: float | None = None
+    recent_err_lines: list[str] = []
     try:
         if proc.stdout is None:
             return
         for raw_line in proc.stdout:
             if "metal-HUD:" not in raw_line:
+                stripped = raw_line.strip()
+                if stripped:
+                    recent_err_lines.append(stripped)
+                    if len(recent_err_lines) > 5:
+                        recent_err_lines.pop(0)
                 continue
             m = METAL_HUD_LINE_RE.search(raw_line)
             if not m:
@@ -380,6 +469,9 @@ def stream_metal_hud_to_web(
 
             prev_frame = frame_num
             prev_ts = ts
+        rc = proc.wait()
+        if rc != 0 and prev_frame is None and recent_err_lines:
+            print(f"⚠️  Ponte syslog encerrou (código {rc}): {recent_err_lines[-1]}")
     except KeyboardInterrupt:
         print("\n⏹️ Transmissão encerrada.")
     finally:
