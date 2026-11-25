@@ -222,6 +222,21 @@ enum TelemetryWebDashboardHTML {
   </table>
 </section>
 
+<section class="card" style="margin-top:14px;">
+  <h2 id="metalHudTitle" style="margin:0 0 6px 0;font-size:14px;">Apple Metal FPS HUD Launcher (Mac &amp; Windows)</h2>
+  <p id="metalHudDesc" style="margin:0 0 12px 0;font-size:12px;color:var(--muted);">
+    Enable Apple's official real-time FPS / GPU / Frame Time overlay inside any game or app on your iPhone/iPad (works over Wi-Fi or USB on macOS; USB on Windows).
+  </p>
+  <div class="controls" style="margin-bottom:10px;">
+    <a id="dlMacBtn" class="btn" style="border-color:var(--accent);color:var(--accent);" href="/download/metal-hud-mac.command" download>macOS (.command)</a>
+    <a id="dlWinBtn" class="btn" style="border-color:var(--green);color:var(--green);" href="/download/metal-hud-windows.bat" download>Windows (.bat)</a>
+    <a id="dlPyBtn" class="btn" href="/download/arkdiehud_metal_hud.py" download>Python Script (.py)</a>
+  </div>
+  <p id="metalHudHint" style="margin:0;font-size:11px;color:var(--muted);line-height:1.45;">
+    macOS: run chmod +x ArkDieHuD_Metal_HUD_Mac.command once (or open in Terminal). Windows: install Python 3 + Apple Devices/iTunes USB driver and right-click -&gt; Run as Administrator.
+  </p>
+</section>
+
 <script>
 const I18N = {
   "en": {
@@ -229,6 +244,12 @@ const I18N = {
     connecting: "Connecting...",
     direct: "Direct",
     downloadCSV: "Download CSV",
+    metalHudTitle: "Apple Metal FPS HUD Launcher (Mac & Windows)",
+    metalHudDesc: "Enable Apple's official real-time FPS / GPU / Frame Time overlay inside any game or app on your iPhone/iPad (works over Wi-Fi or USB on macOS; USB on Windows).",
+    dlMacBtn: "macOS (.command)",
+    dlWinBtn: "Windows (.bat)",
+    dlPyBtn: "Python Script (.py)",
+    metalHudHint: "macOS: run chmod +x ArkDieHuD_Metal_HUD_Mac.command once (or open in Terminal). Windows: install Python 3 + Apple Devices/iTunes USB driver and right-click -> Run as Administrator.",
     hwTitle: "Silicon & Power (CPU / GPU / Watts)",
     hwLegend: "Blue: CPU °C • Orange: GPU °C • Purple: W",
     netTitle: "Network & Drops (Target / UDP / Router)",
@@ -280,6 +301,12 @@ const I18N = {
     connecting: "Conectando...",
     direct: "Direto",
     downloadCSV: "Baixar CSV",
+    metalHudTitle: "Launcher Apple Metal FPS HUD (Mac e Windows)",
+    metalHudDesc: "Ative o contador oficial da Apple (FPS / GPU / Frame Time) dentro de qualquer jogo ou app no iPhone/iPad (funciona via Wi-Fi ou USB no macOS; USB no Windows).",
+    dlMacBtn: "macOS (.command)",
+    dlWinBtn: "Windows (.bat)",
+    dlPyBtn: "Script Python (.py)",
+    metalHudHint: "macOS: rode chmod +x ArkDieHuD_Metal_HUD_Mac.command uma vez (ou abra no Terminal). Windows: tenha Python 3 + driver USB Dispositivos Apple/iTunes e clique com botão direito -> Executar como Administrador.",
     hwTitle: "Silício e Energia (CPU / GPU / Watts)",
     hwLegend: "Azul: CPU °C • Laranja: GPU °C • Roxo: W",
     netTitle: "Rede e Drops (Alvo / UDP / Roteador)",
@@ -323,6 +350,12 @@ const I18N = {
     connecting: "Conectando...",
     direct: "Directo",
     downloadCSV: "Descargar CSV",
+    metalHudTitle: "Launcher Apple Metal FPS HUD (Mac y Windows)",
+    metalHudDesc: "Activa el contador oficial de Apple (FPS / GPU / Frame Time) dentro de cualquier juego o app en tu iPhone/iPad (funciona por Wi-Fi o USB en macOS; USB en Windows).",
+    dlMacBtn: "macOS (.command)",
+    dlWinBtn: "Windows (.bat)",
+    dlPyBtn: "Script Python (.py)",
+    metalHudHint: "macOS: ejecuta chmod +x ArkDieHuD_Metal_HUD_Mac.command una vez (o ábrelo en Terminal). Windows: instala Python 3 + driver USB Apple Devices/iTunes y clic derecho -> Ejecutar como Administrador.",
     hwTitle: "Silicio y Energía (CPU / GPU / Watts)",
     hwLegend: "Azul: CPU °C • Naranja: GPU °C • Púrpura: W",
     netTitle: "Red y Drops (Destino / UDP / Router)",
@@ -393,6 +426,12 @@ function applyStaticTranslations() {
   document.documentElement.lang = currentLang;
   document.title = s.pageTitle;
   document.getElementById("csvLink").textContent = s.downloadCSV;
+  document.getElementById("metalHudTitle").textContent = s.metalHudTitle;
+  document.getElementById("metalHudDesc").textContent = s.metalHudDesc;
+  document.getElementById("dlMacBtn").textContent = s.dlMacBtn;
+  document.getElementById("dlWinBtn").textContent = s.dlWinBtn;
+  document.getElementById("dlPyBtn").textContent = s.dlPyBtn;
+  document.getElementById("metalHudHint").textContent = s.metalHudHint;
   document.getElementById("hwChartTitle").textContent = s.hwTitle;
   document.getElementById("hwChartLegend").textContent = s.hwLegend;
   document.getElementById("netChartTitle").textContent = s.netTitle;

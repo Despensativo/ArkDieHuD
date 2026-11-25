@@ -108,7 +108,7 @@ iPadOS aggressively suspends background apps if another app captures the microph
 
 ## 6. Bonus: Live FPS on ANY Game or App with Apple Metal Performance HUD
 
-Combine **ArkDieHuD** with Apple's native GPU FPS counter (`MTL_HUD_ENABLED=1`) using `./launch_metal_hud.sh` on your Mac — it works with **any** installed game or app, not only built-in examples:
+Combine **ArkDieHuD** with Apple's native GPU FPS counter (`MTL_HUD_ENABLED=1`) using `./launch_metal_hud.sh` on your Mac — or download the self-hosted **Mac (`.command`) / Windows (`.bat`) Metal HUD Launcher** directly from the **PC/Mac Web Dashboard (`:8787`)** inside ArkDieHuD (on Windows: requires Python 3 + Apple Devices/iTunes USB driver, run `.bat` as Administrator):
 
 1. **Interactive Menu (Zero Setup):**
    ```bash

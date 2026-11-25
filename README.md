@@ -89,8 +89,8 @@ cd ArkDieHuD
 # 2) Optional: Rebuild unsigned .ipa locally
 ./Scripts/export-ipa.sh
 
-# 3) Optional: Launch ANY game/app on your iPad with Apple Metal FPS HUD
-./launch_metal_hud.sh                         # Interactive menu (all installed apps)
+# 3) Optional: Launch ANY game/app on your iPhone/iPad with Apple Metal FPS HUD (or download Mac/Windows launchers directly from the app's :8787 web dashboard)
+./launch_metal_hud.sh                         # Interactive menu (prioritizes connected device)
 ./launch_metal_hud.sh <app_name>              # Search by name (e.g. genshin, cod, pubg, capcut)
 ./launch_metal_hud.sh --list                  # List all installed apps & Bundle IDs
 ./launch_metal_hud.sh --bundle <bundle.id>    # Launch directly by Bundle ID

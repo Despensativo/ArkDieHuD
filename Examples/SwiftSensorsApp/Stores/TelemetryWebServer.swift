@@ -115,8 +115,12 @@ actor TelemetryWebServer {
             }
 
             let targetPath = Self.extractRequestTarget(from: requestText)
+            let requestHost = Self.extractRequestHost(from: requestText)
             Task {
-                let responseBytes = await TelemetryWebServer.shared.buildHTTPResponse(forTarget: targetPath)
+                let responseBytes = await TelemetryWebServer.shared.buildHTTPResponse(
+                    forTarget: targetPath,
+                    hostHeader: requestHost
+                )
                 connection.send(content: responseBytes, completion: .contentProcessed { _ in
                     connection.cancel()
                 })
@@ -134,7 +138,18 @@ actor TelemetryWebServer {
         return String(parts[1])
     }
 
-    private func buildHTTPResponse(forTarget target: String) async -> Data {
+    private nonisolated static func extractRequestHost(from request: String) -> String? {
+        for rawLine in request.split(whereSeparator: \.isNewline) {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            if line.lowercased().hasPrefix("host:") {
+                let value = line.dropFirst(5).trimmingCharacters(in: .whitespacesAndNewlines)
+                return value.isEmpty ? nil : value
+            }
+        }
+        return nil
+    }
+
+    private func buildHTTPResponse(forTarget target: String, hostHeader: String?) async -> Data {
         let components = URLComponents(string: "http://localhost" + target)
         let path = components?.path ?? "/"
         let windowSeconds = components?.queryItems?
@@ -204,6 +219,34 @@ actor TelemetryWebServer {
                 contentType: "text/csv; charset=utf-8",
                 extraHeaders: ["Content-Disposition": "attachment; filename=\"ArkDieHuD_Rede.csv\""],
                 body: Data(fallbackCSV.utf8)
+            )
+
+        case "/download/metal-hud-mac.command":
+            return Self.httpResponse(
+                status: "200 OK",
+                contentType: "text/plain; charset=utf-8",
+                extraHeaders: ["Content-Disposition": "attachment; filename=\"ArkDieHuD_Metal_HUD_Mac.command\""],
+                body: Data(MetalHUDLauncherPayloads.macCommandScript.utf8)
+            )
+
+        case "/download/metal-hud-windows.bat":
+            let fallbackHost = self.latestSnapshot.network.route.localIPv4
+                .map { "\($0):\(self.activePort)" } ?? "127.0.0.1:\(self.activePort)"
+            let effectiveHost = hostHeader ?? fallbackHost
+            let script = MetalHUDLauncherPayloads.windowsBatchScript(serverHost: effectiveHost)
+            return Self.httpResponse(
+                status: "200 OK",
+                contentType: "application/octet-stream",
+                extraHeaders: ["Content-Disposition": "attachment; filename=\"ArkDieHuD_Metal_HUD_Windows.bat\""],
+                body: Data(script.utf8)
+            )
+
+        case "/download/arkdiehud_metal_hud.py":
+            return Self.httpResponse(
+                status: "200 OK",
+                contentType: "text/x-python; charset=utf-8",
+                extraHeaders: ["Content-Disposition": "attachment; filename=\"arkdiehud_metal_hud.py\""],
+                body: Data(MetalHUDLauncherPayloads.crossPlatformPythonScript.utf8)
             )
 
         default:

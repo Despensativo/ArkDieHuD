@@ -69,8 +69,10 @@ def list_physical_devices() -> list[dict]:
 
         name = props.get("name", "Dispositivo iOS/iPadOS")
         product = hw.get("productType", "")
+        transport = conn.get("transportType", "")
         is_ipad = "ipad" in product.lower() or "ipad" in name.lower()
         is_connected = conn.get("tunnelState") == "connected"
+        is_wired = transport == "wired"
 
         physical.append(
             {
@@ -78,15 +80,18 @@ def list_physical_devices() -> list[dict]:
                 "name": name,
                 "productType": product,
                 "tunnelState": conn.get("tunnelState", "unknown"),
+                "transport": transport or "unknown",
                 "is_ipad": is_ipad,
                 "is_connected": is_connected,
+                "is_wired": is_wired,
             }
         )
 
     physical.sort(
         key=lambda d: (
-            0 if d["is_ipad"] else 1,
             0 if d["is_connected"] else 1,
+            0 if d["is_wired"] else 1,
+            0 if d["is_ipad"] else 1,
             d["name"].lower(),
         )
     )
@@ -151,8 +156,8 @@ def launch_app(device_id: str, name: str, bundle_id: str) -> None:
     res = subprocess.run(cmd, capture_output=True, text=True)
     output = res.stdout + res.stderr
     if "Locked" in output:
-        print("⚠️  O iPad está BLOQUEADO com a tela apagada.")
-        print("👉 Desbloqueie a tela do iPad e tente novamente!")
+        print("⚠️  O dispositivo está BLOQUEADO com a tela apagada.")
+        print("👉 Desbloqueie a tela e tente novamente!")
         sys.exit(1)
     elif res.returncode != 0 or "ERROR" in output:
         print("❌ Erro ao iniciar:")
@@ -194,12 +199,12 @@ def print_devices() -> None:
         print("⚠️  Nenhum dispositivo físico pareado encontrado.")
         return
 
-    print("📱 Dispositivos Físicos Pareados (ordem de prioridade):")
+    print("📱 Dispositivos Físicos Pareados (conectados primeiro):")
     for idx, dev in enumerate(devices):
         badge = " [SELECIONADO POR PADRÃO]" if idx == 0 else ""
         kind = "iPad" if dev["is_ipad"] else "iPhone"
         print(
-            f"  • {dev['name']} ({kind}, {dev['productType']}) | tunnel={dev['tunnelState']} | UDID={dev['udid']}{badge}"
+            f"  • {dev['name']} ({kind}, {dev['productType']}, {dev['transport']}) | tunnel={dev['tunnelState']} | UDID={dev['udid']}{badge}"
         )
 
 

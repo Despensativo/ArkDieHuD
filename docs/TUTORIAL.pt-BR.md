@@ -108,7 +108,7 @@ O iPadOS pode suspender apps em segundo plano quando o jogo ativa o microfone (c
 
 ## 6. Bônus: FPS Real em QUALQUER Jogo ou App com Apple Metal HUD
 
-Você pode abrir **qualquer jogo ou aplicativo instalado no iPad** com o contador oficial da Apple (`MTL_HUD_ENABLED=1`) usando o script `./launch_metal_hud.sh` no Mac (os atalhos `flash`/`pubg`/`davinci` são apenas exemplos):
+Você pode abrir **qualquer jogo ou aplicativo instalado no iPhone/iPad** com o contador oficial da Apple (`MTL_HUD_ENABLED=1`) usando o script `./launch_metal_hud.sh` no Mac — ou baixar o **Launcher Mac (`.command`) / Windows (`.bat`)** diretamente dentro do **Painel Web `:8787`** do próprio ArkDieHuD (no Windows: requer Python 3 + driver USB Dispositivos Apple/iTunes e rodar o `.bat` como Administrador):
 
 1. **Menu Interativo (Sem configurar nada):**
    ```bash
