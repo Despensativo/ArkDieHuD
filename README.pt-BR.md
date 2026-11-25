@@ -104,6 +104,36 @@ Depois abra `Examples/SwiftSensorsApp.xcodeproj` e clique em **Run**.
 
 ---
 
+## ☕ Apoie o Desenvolvimento
+
+Se o **ArkDieHuD** te economizou tempo ou te ajudou a diagnosticar hardware e quedas de rede no seu iPad, sinta-se à vontade para apoiar o desenvolvimento. Qualquer valor incentiva novas pesquisas em Apple Silicon, testes e ferramentas abertas!
+
+<p align="left">
+  <a href="https://www.buymeacoffee.com/despensativo" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="42">
+  </a>
+</p>
+
+<details>
+  <summary>🇧🇷 <b>Apoiar via Pix (Brasil) — QR Code &amp; Copia e Cola</b></summary>
+  <br>
+
+  <p align="left">
+    <img src="Media/pix_qr.png" alt="Pix QR Code" width="200" style="border-radius: 8px; background: white; padding: 8px;" />
+  </p>
+
+  **Pix Copia e Cola:**
+```text
+00020101021126580014br.gov.bcb.pix01368e4ae808-3a54-4b91-bd4a-0e4249cd37875204000053039865802BR5917HEDSON C DA SILVA6013APARECIDA DE 62070503***6304BE1E
+```
+
+  > **Titular:** Hedson C da Silva  
+  > **Chave Aleatória:** `8e4ae808-3a54-4b91-bd4a-0e4249cd3787`
+
+</details>
+
+---
+
 ## Nota sobre APIs Privadas e Créditos
 
 - Este projeto utiliza APIs privadas `IOKit` / `IOHID` para acessar sensores internos reais do hardware. Destina-se a diagnóstico local, benchmarking e builds pessoais em Modo Desenvolvedor (não para App Store).

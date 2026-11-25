@@ -124,6 +124,36 @@ let net = await sensors.getNetworkQualityMetrics()
 
 ---
 
+## ☕ Support Development
+
+If **ArkDieHuD** saved you time or helped you benchmark your device and diagnose network drops, consider supporting development. Any contribution helps fund ongoing Apple Silicon research, hardware testing, and new open-source tools!
+
+<p align="left">
+  <a href="https://www.buymeacoffee.com/despensativo" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="42">
+  </a>
+</p>
+
+<details>
+  <summary>🇧🇷 <b>Support via Pix (Brazil) — QR Code &amp; Copy/Paste</b></summary>
+  <br>
+
+  <p align="left">
+    <img src="Media/pix_qr.png" alt="Pix QR Code" width="200" style="border-radius: 8px; background: white; padding: 8px;" />
+  </p>
+
+  **Pix Copia e Cola:**
+```text
+00020101021126580014br.gov.bcb.pix01368e4ae808-3a54-4b91-bd4a-0e4249cd37875204000053039865802BR5917HEDSON C DA SILVA6013APARECIDA DE 62070503***6304BE1E
+```
+
+  > **Recipient / Titular:** Hedson C da Silva  
+  > **Random Key / Chave Aleatória:** `8e4ae808-3a54-4b91-bd4a-0e4249cd3787`
+
+</details>
+
+---
+
 ## Note on Private APIs & Attribution
 
 - This project accesses `IOKit` / `IOHID` private APIs for real internal hardware sensors. It is intended for local diagnostics, benchmarking, and personal sideloaded builds via Developer Mode (not App Store distribution).
