@@ -228,12 +228,13 @@ enum TelemetryWebDashboardHTML {
     Enable Apple's official real-time FPS / GPU / Frame Time overlay inside any game or app on your iPhone/iPad (works over Wi-Fi or USB on macOS; USB on Windows).
   </p>
   <div class="controls" style="margin-bottom:10px;">
-    <a id="dlMacBtn" class="btn" style="border-color:var(--accent);color:var(--accent);" href="/download/metal-hud-mac.command" download>macOS (.command)</a>
+    <button id="copyMacCmdBtn" type="button" style="border-color:var(--accent);color:var(--accent);">Copy Mac Command (1-Click)</button>
     <a id="dlWinBtn" class="btn" style="border-color:var(--green);color:var(--green);" href="/download/metal-hud-windows.bat" download>Windows (.bat)</a>
     <a id="dlPyBtn" class="btn" href="/download/arkdiehud_metal_hud.py" download>Python Script (.py)</a>
   </div>
+  <pre id="macCmdPreview" style="margin:0 0 10px 0;padding:8px 10px;border-radius:8px;background:#090c12;border:1px solid var(--border);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--accent);overflow-x:auto;user-select:all;"></pre>
   <p id="metalHudHint" style="margin:0;font-size:11px;color:var(--muted);line-height:1.45;">
-    macOS: run chmod +x ArkDieHuD_Metal_HUD_Mac.command once (or open in Terminal). Windows: install Python 3 + Apple Devices/iTunes USB driver and right-click -&gt; Run as Administrator.
+    macOS: click Copy Mac Command, paste into Terminal and press Enter (no Gatekeeper or chmod prompts; works over Wi-Fi or USB). Windows: download Windows (.bat), install Python 3 + Apple Devices/iTunes USB driver, and right-click -&gt; Run as Administrator.
   </p>
 </section>
 
@@ -246,10 +247,11 @@ const I18N = {
     downloadCSV: "Download CSV",
     metalHudTitle: "Apple Metal FPS HUD Launcher (Mac & Windows)",
     metalHudDesc: "Enable Apple's official real-time FPS / GPU / Frame Time overlay inside any game or app on your iPhone/iPad (works over Wi-Fi or USB on macOS; USB on Windows).",
-    dlMacBtn: "macOS (.command)",
+    copyMacCmd: "Copy Mac Command (1-Click)",
+    copiedMacCmd: "Copied! Paste in Terminal",
     dlWinBtn: "Windows (.bat)",
     dlPyBtn: "Python Script (.py)",
-    metalHudHint: "macOS: run chmod +x ArkDieHuD_Metal_HUD_Mac.command once (or open in Terminal). Windows: install Python 3 + Apple Devices/iTunes USB driver and right-click -> Run as Administrator.",
+    metalHudHint: "macOS: click Copy Mac Command, paste into Terminal and press Enter (no Gatekeeper or chmod prompts; works over Wi-Fi or USB). Windows: download Windows (.bat), install Python 3 + Apple Devices/iTunes USB driver, and right-click -> Run as Administrator.",
     hwTitle: "Silicon & Power (CPU / GPU / Watts)",
     hwLegend: "Blue: CPU °C • Orange: GPU °C • Purple: W",
     netTitle: "Network & Drops (Target / UDP / Router)",
@@ -303,10 +305,11 @@ const I18N = {
     downloadCSV: "Baixar CSV",
     metalHudTitle: "Launcher Apple Metal FPS HUD (Mac e Windows)",
     metalHudDesc: "Ative o contador oficial da Apple (FPS / GPU / Frame Time) dentro de qualquer jogo ou app no iPhone/iPad (funciona via Wi-Fi ou USB no macOS; USB no Windows).",
-    dlMacBtn: "macOS (.command)",
+    copyMacCmd: "Copiar Comando Mac (1 Clique)",
+    copiedMacCmd: "Copiado! Cole no Terminal",
     dlWinBtn: "Windows (.bat)",
     dlPyBtn: "Script Python (.py)",
-    metalHudHint: "macOS: rode chmod +x ArkDieHuD_Metal_HUD_Mac.command uma vez (ou abra no Terminal). Windows: tenha Python 3 + driver USB Dispositivos Apple/iTunes e clique com botão direito -> Executar como Administrador.",
+    metalHudHint: "macOS: clique em Copiar Comando Mac, cole no Terminal e aperte Enter (sem bloqueio do Gatekeeper nem chmod; funciona via Wi-Fi ou USB). Windows: baixe Windows (.bat), tenha Python 3 + driver USB Dispositivos Apple/iTunes e clique com botão direito -> Executar como Administrador.",
     hwTitle: "Silício e Energia (CPU / GPU / Watts)",
     hwLegend: "Azul: CPU °C • Laranja: GPU °C • Roxo: W",
     netTitle: "Rede e Drops (Alvo / UDP / Roteador)",
@@ -352,10 +355,11 @@ const I18N = {
     downloadCSV: "Descargar CSV",
     metalHudTitle: "Launcher Apple Metal FPS HUD (Mac y Windows)",
     metalHudDesc: "Activa el contador oficial de Apple (FPS / GPU / Frame Time) dentro de cualquier juego o app en tu iPhone/iPad (funciona por Wi-Fi o USB en macOS; USB en Windows).",
-    dlMacBtn: "macOS (.command)",
+    copyMacCmd: "Copiar Comando Mac (1 Clic)",
+    copiedMacCmd: "¡Copiado! Pega en Terminal",
     dlWinBtn: "Windows (.bat)",
     dlPyBtn: "Script Python (.py)",
-    metalHudHint: "macOS: ejecuta chmod +x ArkDieHuD_Metal_HUD_Mac.command una vez (o ábrelo en Terminal). Windows: instala Python 3 + driver USB Apple Devices/iTunes y clic derecho -> Ejecutar como Administrador.",
+    metalHudHint: "macOS: pulsa Copiar Comando Mac, pega en Terminal y presiona Enter (sin bloqueo de Gatekeeper ni chmod; funciona por Wi-Fi o USB). Windows: descarga Windows (.bat), instala Python 3 + driver USB Apple Devices/iTunes y clic derecho -> Ejecutar como Administrador.",
     hwTitle: "Silicio y Energía (CPU / GPU / Watts)",
     hwLegend: "Azul: CPU °C • Naranja: GPU °C • Púrpura: W",
     netTitle: "Red y Drops (Destino / UDP / Router)",
@@ -421,6 +425,10 @@ let lastIncidents = null;
 
 function t() { return I18N[currentLang] || I18N["en"]; }
 
+function getMacLaunchCommand() {
+  return "curl -fsSL " + window.location.origin + "/download/arkdiehud_metal_hud.py -o /tmp/arkdiehud_metal_hud.py && python3 /tmp/arkdiehud_metal_hud.py";
+}
+
 function applyStaticTranslations() {
   const s = t();
   document.documentElement.lang = currentLang;
@@ -428,7 +436,8 @@ function applyStaticTranslations() {
   document.getElementById("csvLink").textContent = s.downloadCSV;
   document.getElementById("metalHudTitle").textContent = s.metalHudTitle;
   document.getElementById("metalHudDesc").textContent = s.metalHudDesc;
-  document.getElementById("dlMacBtn").textContent = s.dlMacBtn;
+  document.getElementById("copyMacCmdBtn").textContent = s.copyMacCmd;
+  document.getElementById("macCmdPreview").textContent = getMacLaunchCommand();
   document.getElementById("dlWinBtn").textContent = s.dlWinBtn;
   document.getElementById("dlPyBtn").textContent = s.dlPyBtn;
   document.getElementById("metalHudHint").textContent = s.metalHudHint;
@@ -650,6 +659,29 @@ document.querySelectorAll("button[data-win]").forEach(btn => {
     document.getElementById("csvLink").href = "/api/csv?window=" + selectedWindow;
     pollHistoryAndIncidents();
   });
+});
+
+document.getElementById("copyMacCmdBtn").addEventListener("click", async () => {
+  const cmd = getMacLaunchCommand();
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(cmd);
+    } else {
+      throw new Error("fallback");
+    }
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = cmd;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  const btn = document.getElementById("copyMacCmdBtn");
+  btn.textContent = t().copiedMacCmd;
+  setTimeout(() => { btn.textContent = t().copyMacCmd; }, 2500);
 });
 
 applyStaticTranslations();

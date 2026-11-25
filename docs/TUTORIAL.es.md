@@ -80,7 +80,7 @@ Activa **Grabar logs de telemetría (24h)** para guardar métricas cada 15s, con
 
 ## 6. Bonus: FPS Reales en CUALQUIER Juego o App con Apple Metal HUD
 
-Puedes lanzar **cualquier juego o app instalado en tu iPhone/iPad** con el contador nativo de Apple (`MTL_HUD_ENABLED=1`) usando `./launch_metal_hud.sh` en Mac — o descargar el **Launcher para Mac (`.command`) / Windows (`.bat`)** directamente desde el **Panel Web `:8787`** integrado en ArkDieHuD (en Windows: requiere Python 3 + driver USB Apple Devices/iTunes y ejecutar el `.bat` como Administrador):
+Puedes lanzar **cualquier juego o app instalado en tu iPhone/iPad** con el contador nativo de Apple (`MTL_HUD_ENABLED=1`) usando `./launch_metal_hud.sh` en Mac — u obtener el **Launcher para Mac (comando de 1 clic) / Windows (`.bat`)** directamente desde el **Panel Web `:8787`** integrado en ArkDieHuD (en Windows: requiere Python 3 + driver USB Apple Devices/iTunes y ejecutar el `.bat` como Administrador):
 
 1. **Menú interactivo (sin configurar nada):** `./launch_metal_hud.sh`
 2. **Búsqueda por nombre:** `./launch_metal_hud.sh genshin` o `./launch_metal_hud.sh cod`
