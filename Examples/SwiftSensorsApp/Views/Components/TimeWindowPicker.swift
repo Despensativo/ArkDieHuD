@@ -6,10 +6,10 @@ struct TimeWindowPicker: View {
     @Binding var timeWindow: TimeInterval
 
     var body: some View {
-        Picker("Time Window", selection: self.$timeWindow) {
-            Text("1 minute").tag(TimeInterval(60))
-            Text("5 minutes").tag(TimeInterval(5 * 60))
-            Text("15 minutes").tag(TimeInterval(15 * 60))
+        Picker(L10n.tr("Time Window"), selection: self.$timeWindow) {
+            Text(L10n.tr("1 minute")).tag(TimeInterval(60))
+            Text(L10n.tr("5 minutes")).tag(TimeInterval(5 * 60))
+            Text(L10n.tr("15 minutes")).tag(TimeInterval(15 * 60))
         }
         .pickerStyle(SegmentedPickerStyle())
         .padding(.top, 8)

@@ -8,14 +8,14 @@ struct DiskInfoSection: View {
     var viewModel: SensorsViewModel
 
     var body: some View {
-        Section(header: Text("Disk Information")) {
+        Section(header: Text(L10n.tr("Disk Information"))) {
             if self.viewModel.diskStats != nil, self.viewModel.formattedDiskValues.count >= 3 {
-                InfoRow(label: "Total", value: self.viewModel.formattedDiskValues[0])
-                InfoRow(label: "Used", value: self.viewModel.formattedDiskValues[1])
-                InfoRow(label: "Free", value: self.viewModel.formattedDiskValues[2])
+                InfoRow(label: L10n.tr("Total"), value: self.viewModel.formattedDiskValues[0])
+                InfoRow(label: L10n.tr("Used"), value: self.viewModel.formattedDiskValues[1])
+                InfoRow(label: L10n.tr("Free"), value: self.viewModel.formattedDiskValues[2])
             } else {
-                Text("Loading disk information...")
-                    .foregroundColor(.gray)
+                Text(L10n.tr("Loading disk information..."))
+                    .foregroundStyle(.secondary)
                     .italic()
             }
         }

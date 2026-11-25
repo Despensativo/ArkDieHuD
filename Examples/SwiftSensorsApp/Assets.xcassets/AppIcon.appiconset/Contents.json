@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "sensors_icon.heic",
+      "filename" : "arkdiehud_icon.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

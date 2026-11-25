@@ -21,7 +21,7 @@ struct BaseChartView: View {
             if !self.data.isEmpty {
                 Chart(self.data) { reading in
                     LineMark(
-                        x: .value("Time", reading.timestamp),
+                        x: .value(L10n.tr("Time"), reading.timestamp),
                         y: .value(self.yAxisTitle, reading.value)
                     )
                     .foregroundStyle(by: .value("Sensor", reading.sensorName))
@@ -39,7 +39,7 @@ struct BaseChartView: View {
                     }
                 }
             } else {
-                Text("Collecting data...")
+                Text(L10n.tr("Collecting data..."))
             }
 
             TimeWindowPicker(timeWindow: self.$timeWindow)
@@ -58,7 +58,7 @@ struct MultiSensorChart: View {
     var body: some View {
         BaseChartView(
             data: self.viewModel.filteredThermalData(timeWindow: self.timeWindow),
-            yAxisTitle: "Temperature",
+            yAxisTitle: L10n.tr("Temperature"),
             formatYValue: { "\(Int($0))°C" },
             timeWindow: self.$timeWindow
         )
@@ -79,7 +79,7 @@ struct VoltageChart: View {
     var body: some View {
         BaseChartView(
             data: self.viewModel.filteredVoltageData(timeWindow: self.timeWindow),
-            yAxisTitle: "Voltage",
+            yAxisTitle: L10n.tr("Voltage"),
             formatYValue: { String(format: "%.2f V", $0) },
             timeWindow: self.$timeWindow
         )
@@ -100,7 +100,7 @@ struct CurrentChart: View {
     var body: some View {
         BaseChartView(
             data: self.viewModel.filteredCurrentData(timeWindow: self.timeWindow),
-            yAxisTitle: "Current",
+            yAxisTitle: L10n.tr("Current"),
             formatYValue: { current in
                 if abs(current) < 0.001 {
                     return String(format: "%.1f μA", current * 1_000_000)

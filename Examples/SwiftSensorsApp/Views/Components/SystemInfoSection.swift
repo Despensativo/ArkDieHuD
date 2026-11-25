@@ -8,31 +8,15 @@ struct SystemInfoSection: View {
     var viewModel: SensorsViewModel
 
     var body: some View {
-        Section(header: Text("System")) {
+        Section(header: Text(L10n.tr("System"))) {
             HStack {
-                Text("Thermal State")
+                Text(L10n.tr("Thermal State"))
                 Spacer()
-                Text(self.viewModel.thermalState.rawValue)
-                    .foregroundColor(self.thermalStateColor(self.viewModel.thermalState))
+                Text(TelemetryTheme.localizedThermalState(self.viewModel.thermalState.rawValue))
+                    .foregroundStyle(TelemetryTheme.thermalStateColor(self.viewModel.thermalState))
             }
 
-            InfoRow(label: "Uptime", value: self.viewModel.uptimeText)
-        }
-    }
-
-    /// Get color based on thermal state
-    private func thermalStateColor(_ state: ThermalState) -> Color {
-        switch state {
-        case .nominal:
-            return .green
-        case .fair:
-            return .yellow
-        case .serious:
-            return .orange
-        case .critical:
-            return .red
-        case .unknown:
-            return .gray
+            InfoRow(label: L10n.tr("Uptime"), value: self.viewModel.uptimeText)
         }
     }
 }

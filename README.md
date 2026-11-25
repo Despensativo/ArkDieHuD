@@ -1,89 +1,127 @@
-# SwiftSensors
-
-[![Platform Compatibility](https://img.shields.io/badge/Platforms-iOS-brightgreen)](https://swift.org/platforms/)
-[![Swift Version](https://img.shields.io/badge/Swift-6.0-orange)](https://swift.org)
-<a href="https://notebooklm.google.com/notebook/5851ef05-463e-4d30-bd9b-01f7668e8f8f/audio"><img src="https://img.shields.io/badge/Listen-Podcast-red" alt="Listen to our Podcast"></a>
-<a href="https://docsend.com/view/x87pcxrnqutb9k2q"><img src="https://img.shields.io/badge/View-Our%20Deck-green" alt="View our Deck"></a>
-<a href="mailto:dima@getmirai.co,Alexey@getmirai.co?subject=Interested%20in%20Mirai"><img src="https://img.shields.io/badge/Contact%20Us-Email-blue" alt="Contact Us"></a>
-
-A Swift package for accessing real device sensor readings, including thermal, voltage, current, memory, CPU, and disk statistics.
-
-<p align="left">
-    <img src="Media/swift_sensors.png", width="260">
+<p align="center">
+  <img src="Media/arkdiehud_github_banner.png" alt="ArkDieHuD — iPadOS Silicon & Network Telemetry Banner" width="100%">
 </p>
 
-## Features
+<p align="center">
+  <strong>English</strong> | <a href="README.pt-BR.md">Português (BR)</a> | <a href="README.es.md">Español</a>
+</p>
 
-- Access thermal, voltage, current sensors readings
-- Memory usage statistics
-- CPU usage statistics
-- Disk space information
-- System information
-- Battery information
-- Formatted output for human-readable display
+# ArkDieHuD
 
-## Installation
+[![Platform Compatibility](https://img.shields.io/badge/Platform-iPadOS%2017%2B-black)](https://swift.org/platforms/)
+[![Swift Version](https://img.shields.io/badge/Swift-5.0%20%2F%206.0-orange)](https://swift.org)
+[![Languages](https://img.shields.io/badge/Languages-EN%20%7C%20PT--BR%20%7C%20ES-38bdf8)](docs/TUTORIAL.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-34D399)](LICENSE)
 
-### Swift Package Manager
+**ArkDieHuD** is a real-time **Apple Silicon** hardware telemetry suite, Picture-in-Picture (`PiP`) overlay, **Dual-Probe (`ICMP + UDP DNS 53 + TCP`)** network monitor, **24-hour SQLite WAL** logger, and local **PC/Mac Web Dashboard (`:8787`)** for **iPadOS & iOS**, built on top of the `SwiftSensors` (`IOHID` + Darwin `Mach`) engine.
 
-Add the following to your `Package.swift` file:
+> **New here?** Follow the complete step-by-step **[Tutorial Guide (EN)](docs/TUTORIAL.md)** · **[Tutorial (PT-BR)](docs/TUTORIAL.pt-BR.md)** · **[Tutorial (ES)](docs/TUTORIAL.es.md)**
+
+---
+
+## Key Features
+
+- **Real Silicon & Power Sensors (`IOHID` + `Mach`):** Reads actual CPU die clusters (`PMU tdie`), GPU die (`PMU2 tdie`), voltage/current rails, estimated wattage (`W`), total/per-core CPU load, RAM + Jetsam headroom, and iPadOS thermal state — zero fabricated estimates.
+- **Floating PiP HUD + Total Customization:** 4 dynamic layouts (*Gamer Bar*, *Gamer Overlay*, *Compact Grid*, *Detailed*) and **12 independent metric toggles** with 4 one-tap presets. Automatically shrinks/expands without jitter. Also includes an iPadOS **Slide Over** mode.
+- **Competitive Dual-Probe Network Monitor:** Native non-privileged `SOCK_DGRAM` **ICMP**, real **UDP (DNS port 53)** queries, and **TCP** running side-by-side against your **Local Router (Gateway)** to separate local Wi-Fi issues from ISP/CGNAT drops, complete with `P50/P95/P99`, RFC 3550 jitter, drop-cycle detection, and a 1-hour chronological incident log.
+- **24-Hour Persistent SQLite WAL History:** Batched 15-second disk writes with automatic 24-hour pruning, aggregated charts (`15m | 1h | 6h | 24h`), and unified Hardware + Network CSV export.
+- **PC/Mac Web Monitor Without On-Screen HUD (`:8787`):** Offline dark web dashboard served straight from the iPad over Wi-Fi or USB (`iproxy 8787 8787`), plus a **Stealth PiP** pill (`Drag to edge to hide & stay active`) to keep background telemetry alive even during full-screen voice-chat games.
+- **Automatic 3-Language Support (`en` / `pt-BR` / `es`):** Native iPadOS String Catalog detection across the app, PiP overlay, system permissions, and the PC web dashboard (with quick `EN | PT | ES` switcher).
+- **Free Apple ID Ready:** Clean entitlements compatible with free Personal Team signing in Xcode or sideloading tools using the pre-built `ArkDieHuD-unsigned.ipa` in [Releases](https://github.com/Despensativo/ArkDieHuD/releases).
+
+---
+
+## Live Screenshots
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="Media/screenshots/dashboard_live.png" alt="ArkDieHuD Live Dashboard" width="100%">
+      <p align="center"><em>Main Dashboard + Live Telemetry Strip & PiP Preview</em></p>
+    </td>
+    <td width="50%">
+      <img src="Media/screenshots/pip_and_metal_hud.png" alt="ArkDieHuD PiP over PUBG + Apple Metal HUD" width="100%">
+      <p align="center"><em>Floating Gamer Bar PiP + Apple Metal FPS HUD over PUBG</em></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="Media/screenshots/logs_24h.png" alt="24h SQLite WAL Telemetry History" width="100%">
+      <p align="center"><em>24-Hour Persistent SQLite WAL Charts & CSV Export</em></p>
+    </td>
+    <td width="50%">
+      <img src="Media/screenshots/pc_stealth_pip.png" alt="Stealth PC Monitor PiP Pill" width="100%">
+      <p align="center"><em>Stealth PC Monitor Pill (:8787) — Drag to edge to hide</em></p>
+    </td>
+  </tr>
+</table>
+
+---
+
+## Quick Start
+
+```bash
+# 1) Clone the repository
+git clone https://github.com/Despensativo/ArkDieHuD.git
+cd ArkDieHuD
+
+# 2) Build unsigned .ipa for free Apple IDs (Sideloadly / AltStore / SideStore)
+./Scripts/export-ipa.sh
+
+# 3) Optional: Launch a game on your paired iPad with Apple Metal Performance HUD (FPS)
+./launch_metal_hud.sh flash
+./launch_metal_hud.sh
+
+# 4) Optional: USB tunnel for PC/Mac Web Dashboard (http://127.0.0.1:8787)
+iproxy 8787 8787
+```
+
+### Local Xcode Signing (Optional)
+
+Personal Apple Team IDs are intentionally excluded from git. Create `Examples/Config/LocalSigning.xcconfig` locally (gitignored):
+
+```xcconfig
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+PRODUCT_BUNDLE_IDENTIFIER = com.yourname.ArkDieHuD
+```
+
+Then open `Examples/SwiftSensorsApp.xcodeproj` and hit **Run**.
+
+---
+
+## Documentation
+
+| Guide / Script | Purpose | Link |
+| :--- | :--- | :--- |
+| **Step-by-Step Tutorial** | Installation (Free Apple ID), PiP, Dual-Probe, 24h Logs, PC Monitor & Metal HUD | [EN](docs/TUTORIAL.md) · [PT-BR](docs/TUTORIAL.pt-BR.md) · [ES](docs/TUTORIAL.es.md) |
+| **Apple Metal HUD Guide** | Pairing & launching games with `MTL_HUD_ENABLED=1` | [docs/METAL_HUD_GUIDE.md](docs/METAL_HUD_GUIDE.md) |
+| **Architecture Map** | SwiftUI, PiP CoreGraphics, `SwiftSensors`, `IOKit` & SQLite layers | [docs/ARCHITECTURE_MAP.md](docs/ARCHITECTURE_MAP.md) |
+| **Brand & Design System** | Silicon Die icon, typography & semantic telemetry tokens | [DESIGN.md](DESIGN.md) |
+| **IPA Exporter Script** | Compiles Release and builds `dist/ArkDieHuD-unsigned.ipa` | [Scripts/export-ipa.sh](Scripts/export-ipa.sh) |
+
+---
+
+## Using the `SwiftSensors` Swift Package
+
+You can also import the underlying `SwiftSensors` SPM library in your own Swift/iOS projects:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/getmirai/swift-sensors.git", from: "0.0.1")
+    .package(url: "https://github.com/Despensativo/ArkDieHuD.git", branch: "main")
 ]
 ```
-
-## Usage
 
 ```swift
 import SwiftSensors
 
-// Get an instance of the sensor manager
 let sensors = SwiftSensors.shared
-
-// Get thermal sensor readings
-let thermalReadings = await sensors.getThermalSensorReadings()
-for reading in thermalReadings {
-    print("\(reading.name): \(SensorFormatter.shared.formatTemperature(reading.temperature))")
-}
-
-// Get voltage sensor readings
-let voltageReadings = await sensors.getVoltageSensorReadings()
-for reading in voltageReadings {
-    print("\(reading.name): \(reading.voltage)V")
-}
-
-// Get current sensor readings
-let currentReadings = await sensors.getCurrentSensorReadings()
-for reading in currentReadings {
-    print("\(reading.name): \(reading.current)A")
-}
-
-// Get memory statistics
-let memoryStats = await sensors.getMemoryStats()
-print("Memory Usage: \(await sensors.getFormattedMemoryUsage())")
-
-// Get CPU statistics
-let cpuStats = await sensors.getCPUStats()
-print("CPU Usage: \(await sensors.getFormattedCPUUsage())")
-
-// Get disk statistics
-let diskStats = await sensors.getDiskStats()
-print("Disk Usage: \(await sensors.getFormattedDiskUsage())")
-
-// Get thermal state
-let thermalState = await sensors.getThermalState()
-print("Thermal State: \(thermalState.rawValue)")
-
-// Get system uptime
-print("System Uptime: \(await sensors.getFormattedUptime())")
+let thermals = await sensors.getThermalSensorReadings()
+let net = await sensors.getNetworkQualityMetrics()
 ```
 
-## Note on Private APIs
+---
 
-This package uses private APIs to access internal device sensors including thermal, voltage, and current readings. While this works well for development and diagnostic purposes, be aware that using private APIs may not be acceptable for App Store submissions.
+## Note on Private APIs & Attribution
 
-## License
-
-This project is available under the MIT license. See the [LICENSE](LICENSE) file for more info.
+- This project accesses `IOKit` / `IOHID` private APIs for real internal hardware sensors. It is intended for local diagnostics, benchmarking, and personal sideloaded builds via Developer Mode (not App Store distribution).
+- Core sensor bindings originally forked from [`trymirai/swift-sensors`](https://github.com/trymirai/swift-sensors) under the MIT License. See [LICENSE](LICENSE).

@@ -11,20 +11,20 @@ struct TemperatureChart: View {
         Chart {
             ForEach(self.store.readings) { reading in
                 LineMark(
-                    x: .value("Time", reading.timestamp),
-                    y: .value("Temperature", reading.temperature)
+                    x: .value(L10n.tr("Time"), reading.timestamp),
+                    y: .value(L10n.tr("Temperature"), reading.temperature)
                 )
                 .foregroundStyle(Color.blue)
                 .interpolationMethod(.catmullRom)
             }
 
-            RuleMark(y: .value("Average", self.store.avgTemperature))
+            RuleMark(y: .value(L10n.tr("Average"), self.store.avgTemperature))
                 .foregroundStyle(Color.gray.opacity(0.5))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
                 .annotation(position: .trailing) {
-                    Text("Avg")
+                    Text(L10n.tr("Avg"))
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.secondary)
                 }
         }
         .chartYScale(domain: max(0.1, self.store.minTemperature-1)...max(1, self.store.maxTemperature+1))

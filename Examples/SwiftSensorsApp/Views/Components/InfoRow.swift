@@ -14,6 +14,8 @@ struct InfoRow: View {
             Text(self.label)
             Spacer()
             Text(self.value)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
         }
     }
 }

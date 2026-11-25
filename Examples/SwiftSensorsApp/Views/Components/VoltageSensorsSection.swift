@@ -8,7 +8,7 @@ struct VoltageSensorsSection: View {
     var viewModel: SensorsViewModel
 
     var body: some View {
-        Section(header: Text("Voltage Sensors")) {
+        Section(header: Text(L10n.tr("Voltage Sensors"))) {
             ForEach(
                 Array(zip(self.viewModel.voltageSensorReadings.indices, self.viewModel.voltageSensorReadings)),
                 id: \.1.id
@@ -20,8 +20,8 @@ struct VoltageSensorsSection: View {
             }
 
             if self.viewModel.voltageSensorReadings.isEmpty {
-                Text("No voltage sensors found")
-                    .foregroundColor(.gray)
+                Text(L10n.tr("No voltage sensors found"))
+                    .foregroundStyle(.secondary)
                     .italic()
             }
         }

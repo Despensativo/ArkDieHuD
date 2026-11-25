@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# pre-push — Gate offline completo antes de enviar commits (iOS arm64 generic)
+# ==============================================================================
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+DERIVED_DATA="${DERIVED_DATA:-"$(dirname "$REPO_ROOT")/.build"}"
+BUILD_LOG="$(mktemp)"
+trap 'rm -f "$BUILD_LOG"' EXIT
+
+echo "🔨 [pre-push] Validando compilação SwiftSensorsApp (generic/platform=iOS)..."
+set +e
+xcodebuild \
+    -project "$REPO_ROOT/Examples/SwiftSensorsApp.xcodeproj" \
+    -scheme SwiftSensorsApp \
+    -configuration Debug \
+    -destination "generic/platform=iOS" \
+    CODE_SIGNING_ALLOWED=NO \
+    -derivedDataPath "$DERIVED_DATA" \
+    build > "$BUILD_LOG" 2>&1
+BUILD_RC=$?
+set -e
+
+if [ "$BUILD_RC" -ne 0 ] || ! grep -q "\*\* BUILD SUCCEEDED \*\*" "$BUILD_LOG"; then
+    echo "❌ [pre-push] Build falhou (rc=$BUILD_RC). Últimas linhas:" >&2
+    tail -n 30 "$BUILD_LOG" >&2
+    exit 1
+fi
+
+echo "✅ [pre-push] Build offline iOS aprovado."
+exit 0

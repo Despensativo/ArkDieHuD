@@ -1,361 +1,237 @@
 import SwiftSensors
 import SwiftUI
 
-/// Main content view for the app
+/// Primary instrument dashboard for hardware thermals, PiP HUD launch, Slide Over,
+/// and deep kernel diagnostics.
 struct ContentView: View {
-    /// Access the view model from the environment
     @Environment(\.sensorsViewModel) private var viewModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
 
-    /// Timer for regular updates
-    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
-    /// Navigation path for controlling navigation stack
+    @Bindable var hudController: PiPHUDController
     @State private var navigationPath = NavigationPath()
+    @State private var showCustomizationSheet: Bool = false
+
+    private var config: TelemetryVisibilityConfig {
+        self.hudController.visibilityConfig
+    }
+
+    private var visibleDashboardSections: [SensorSection] {
+        SensorSection.allCases.filter { self.config.isDashboardSectionVisible($0) }
+    }
+
+    private var sectionColumns: [GridItem] {
+        let count = (self.horizontalSizeClass == .regular) ? 2 : 1
+        return Array(repeating: GridItem(.flexible(), spacing: TelemetryTheme.gridSpacing), count: count)
+    }
 
     var body: some View {
+        let showLiveStrip = self.config.showDashboardLiveStrip && self.config.hasAnyMetricEnabled
+        let showPiPCard = self.config.showDashboardPiPCard
+        let sections = self.visibleDashboardSections
+        let showGrid = self.config.showDashboardSensorsGrid && !sections.isEmpty
+
         NavigationStack(path: self.$navigationPath) {
-            List {
-                ForEach(SensorSection.allCases, id: \.self) { section in
-                    Button {
-                        self.navigationPath.append(NavigationDestination.sectionDetail(section: section))
-                    } label: {
-                        HStack {
-                            Text(section.rawValue)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
+            ScrollView {
+                VStack(alignment: .leading, spacing: TelemetryTheme.sectionSpacing) {
+                    ArkDieBrandLogoView(style: .header)
+
+                    if !showLiveStrip && !showPiPCard && !showGrid {
+                        ContentUnavailableView {
+                            Label(L10n.tr("Dashboard Hidden"), systemImage: "slider.horizontal.3")
+                        } description: {
+                            Text(L10n.tr("All main dashboard sections have been disabled."))
+                        } actions: {
+                            Button(L10n.tr("Customize Dashboard")) {
+                                self.showCustomizationSheet = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    } else {
+                        if showLiveStrip {
+                            LiveTelemetryStripView(
+                                snapshot: self.hudController.latestSnapshot,
+                                config: self.config
+                            )
+                        }
+
+                        if showPiPCard {
+                            HUDDashboardSection(hudController: self.hudController)
+                        }
+
+                        if showGrid {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(L10n.tr("Sensors & Diagnostics"))
+                                    .font(.title3.bold())
+                                    .foregroundStyle(.primary)
+
+                                LazyVGrid(columns: self.sectionColumns, spacing: TelemetryTheme.gridSpacing) {
+                                    ForEach(sections, id: \.self) { section in
+                                        NavigationLink(value: NavigationDestination.sectionDetail(section: section)) {
+                                            self.sectionTile(section)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+                .padding()
             }
-            .navigationTitle("SwiftSensors")
+            .background(TelemetryTheme.groupedBackground)
+            .navigationTitle("ArkDieHuD")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button(L10n.tr("Customize"), systemImage: "slider.horizontal.3") {
+                        self.showCustomizationSheet = true
+                    }
+
+                    Button(
+                        self.hudController.isPiPActive ? L10n.tr("Close PiP") : L10n.tr("HUD PiP"),
+                        systemImage: self.hudController.isPiPActive ? "pip.exit" : "pip.enter"
+                    ) {
+                        if self.hudController.isPiPActive {
+                            self.hudController.stopPiP()
+                        } else {
+                            self.hudController.prepareAudioAndStartPiP()
+                        }
+                    }
+                    .disabled(!self.hudController.isSupported)
+                    .sensoryFeedback(.impact(weight: .medium), trigger: self.hudController.isPiPActive)
+                }
+            }
+            .sheet(isPresented: self.$showCustomizationSheet) {
+                TelemetryCustomizationSheetView(hudController: self.hudController)
+            }
             .navigationDestination(for: NavigationDestination.self) { destination in
                 switch destination {
                 case .sensorDetail(let sensorName):
                     SensorDetailView(sensorName: sensorName)
                 case .sectionDetail(let section):
-                    SectionDetailView(section: section)
+                    if section == .network {
+                        NetworkDiagnosticsView(hudController: self.hudController)
+                    } else if section == .telemetryLogs {
+                        TelemetryLogsView(hudController: self.hudController)
+                    } else {
+                        SectionDetailView(section: section)
+                    }
+                case .slideOver:
+                    SlideOverHUDView(hudController: self.hudController)
+                case .networkDiagnostics:
+                    NetworkDiagnosticsView(hudController: self.hudController)
+                case .telemetryLogs:
+                    TelemetryLogsView(hudController: self.hudController)
                 }
             }
-            .onAppear {
-                self.viewModel.updateIfNeeded()
-            }
-            .onReceive(self.timer) { _ in
-                self.viewModel.updateIfNeeded()
+            .task {
+                while !Task.isCancelled {
+                    if self.scenePhase == .active {
+                        self.viewModel.updateIfNeeded()
+                    }
+                    try? await Task.sleep(for: .seconds(1))
+                }
             }
         }
+    }
+
+    private func sectionTile(_ section: SensorSection) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: section.systemImage)
+                .font(.title3)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(section.localizedTitle)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Text(
+                    section.subtitle(
+                        from: self.viewModel,
+                        snapshot: self.hudController.latestSnapshot,
+                        isRecordingLogs: self.hudController.isRecordingLogs
+                    )
+                )
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.bold())
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, TelemetryTheme.cardPadding)
+        .padding(.vertical, 12)
+        .frame(minHeight: 60)
+        .background(
+            RoundedRectangle(cornerRadius: TelemetryTheme.compactCornerRadius)
+                .fill(TelemetryTheme.cardSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: TelemetryTheme.compactCornerRadius)
+                        .strokeBorder(TelemetryTheme.subtleBorder, lineWidth: 1)
+                )
+        )
     }
 }
 
-/// A view that displays the details of a particular sensor section
-struct SectionDetailView: View {
-    let section: SensorSection
-    @Environment(\.sensorsViewModel) private var viewModel
-
-    /// Timer for regular updates
-    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
-    var body: some View {
-        VStack {
-            self.chartForSection
-                .frame(height: 220)
-                .padding()
-            List {
-                self.sectionContent
-            }
-        }
-        .navigationTitle(self.section.rawValue)
-        .onAppear {
-            self.viewModel.updateIfNeeded()
-        }
-        .onReceive(self.timer) { _ in
-            self.viewModel.updateIfNeeded()
+private extension SensorSection {
+    var systemImage: String {
+        switch self {
+        case .network: return "network"
+        case .telemetryLogs: return "externaldrive.badge.timemachine"
+        case .performance: return "gauge.with.dots.needle.67percent"
+        case .thermal: return "thermometer.medium"
+        case .voltage: return "bolt.circle"
+        case .current: return "waveform.path"
+        case .memory: return "memorychip"
+        case .cpu: return "cpu"
+        case .disk: return "internaldrive"
+        case .system: return "ipad"
         }
     }
 
-    @ViewBuilder
-    private var chartForSection: some View {
-        switch self.section {
+    @MainActor
+    func subtitle(from viewModel: SensorsViewModel, snapshot: TelemetrySnapshot, isRecordingLogs: Bool) -> String {
+        switch self {
+        case .network:
+            let net = snapshot.network
+            let ping = net.isLastProbeLost ? "DROP" : (net.pingMs.map { String(format: "%.0f ms", $0) } ?? "-- ms")
+            return L10n.fmt("%@ • %@ • %.1f%% Loss", net.target.host, ping, net.totalLossPercent)
+        case .telemetryLogs:
+            return isRecordingLogs
+                ? L10n.tr("24h recording active • SQLite WAL")
+                : L10n.tr("24h recording paused")
+        case .performance:
+            let threads = viewModel.threadSummary?.totalThreads ?? 0
+            return threads > 0
+                ? L10n.fmt("Mach VM • %lld active threads", threads)
+                : L10n.tr("Mach VM, Threads & Jetsam")
         case .thermal:
-            if self.viewModel.selectedThermalReadings.isEmpty {
-                Text("Select readings to view in chart")
-                    .foregroundColor(.gray)
-                    .italic()
-                    .onAppear {
-                        // Ensure data is collected even when nothing is selected
-                        self.viewModel.updateIfNeeded()
-                    }
-            } else {
-                MultiSensorChart()
-            }
-
+            return L10n.fmt("%lld IOHID sensors", viewModel.thermalSensorReadings.count)
         case .voltage:
-            if self.viewModel.selectedVoltageReadings.isEmpty {
-                Text("Select readings to view in chart")
-                    .foregroundColor(.gray)
-                    .italic()
-                    .onAppear {
-                        // Ensure data is collected even when nothing is selected
-                        self.viewModel.updateIfNeeded()
-                    }
-            } else {
-                VoltageChart()
-            }
-
+            return L10n.fmt("%lld voltage rails", viewModel.voltageSensorReadings.count)
         case .current:
-            if self.viewModel.selectedCurrentReadings.isEmpty {
-                Text("Select readings to view in chart")
-                    .foregroundColor(.gray)
-                    .italic()
-                    .onAppear {
-                        // Ensure data is collected even when nothing is selected
-                        self.viewModel.updateIfNeeded()
-                    }
-            } else {
-                CurrentChart()
-            }
-
+            return L10n.fmt("%lld current sensors", viewModel.currentSensorReadings.count)
         case .memory:
-            if self.viewModel.selectedMemoryItems.isEmpty {
-                Text("Select memory metrics to view in chart")
-                    .foregroundColor(.gray)
-                    .italic()
-                    .onAppear {
-                        // Ensure data is collected even when nothing is selected
-                        self.viewModel.updateIfNeeded()
-                    }
-            } else {
-                MemoryChart()
-            }
-
+            return viewModel.formattedMemoryValues.indices.contains(6)
+                ? L10n.fmt("In use: %@", viewModel.formattedMemoryValues[6])
+                : L10n.tr("Mach VM Statistics")
         case .cpu:
-            if self.viewModel.selectedCPUItems.isEmpty {
-                Text("Select CPU metrics to view in chart")
-                    .foregroundColor(.gray)
-                    .italic()
-                    .onAppear {
-                        // Ensure data is collected even when nothing is selected
-                        self.viewModel.updateIfNeeded()
-                    }
-            } else {
-                CPUChart()
-            }
-
+            return viewModel.formattedCPUValues.first.map { L10n.fmt("Total load: %@", $0) } ?? L10n.tr("Kernel CPU")
         case .disk:
-            if self.viewModel.selectedDiskItems.isEmpty {
-                Text("Select disk metrics to view in chart")
-                    .foregroundColor(.gray)
-                    .italic()
-                    .onAppear {
-                        // Ensure data is collected even when nothing is selected
-                        self.viewModel.updateIfNeeded()
-                    }
-            } else {
-                DiskChart()
-            }
-
+            return viewModel.formattedDiskValues.indices.contains(2)
+                ? L10n.fmt("Free: %@", viewModel.formattedDiskValues[2])
+                : L10n.tr("Storage space")
         case .system:
-            // System section doesn't have a chart
-            Text("System Information")
-                .font(.headline)
-        }
-    }
-
-    @ViewBuilder
-    private var sectionContent: some View {
-        switch self.section {
-        case .thermal:
-            ForEach(self.viewModel.thermalSensorReadings, id: \.id) { sensor in
-                let isSelected = self.viewModel.selectedThermalReadings.contains(sensor.name)
-                Button {
-                    if isSelected {
-                        self.viewModel.selectedThermalReadings.remove(sensor.name)
-                    } else {
-                        self.viewModel.selectedThermalReadings.insert(sensor.name)
-                    }
-                } label: {
-                    HStack {
-                        Text(sensor.name)
-                        Spacer()
-                        Text(self.viewModel.thermalSensorReadings.firstIndex(where: { $0.id == sensor.id }).flatMap { idx in
-                            idx < self.viewModel.formattedTemperatures.count ? self.viewModel.formattedTemperatures[idx] : nil
-                        } ?? "\(sensor.temperature) °C")
-
-                        if isSelected {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .foregroundColor(.primary)
-                }
-            }
-
-        case .voltage:
-            ForEach(self.viewModel.voltageSensorReadings, id: \.id) { sensor in
-                let isSelected = self.viewModel.selectedVoltageReadings.contains(sensor.name)
-                Button {
-                    if isSelected {
-                        self.viewModel.selectedVoltageReadings.remove(sensor.name)
-                    } else {
-                        self.viewModel.selectedVoltageReadings.insert(sensor.name)
-                    }
-                } label: {
-                    HStack {
-                        Text(sensor.name)
-                        Spacer()
-                        Text(self.viewModel.voltageSensorReadings.firstIndex(where: { $0.id == sensor.id }).flatMap { idx in
-                            idx < self.viewModel.formattedVoltages.count ? self.viewModel.formattedVoltages[idx] : nil
-                        } ?? "\(sensor.voltage) V")
-
-                        if isSelected {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .foregroundColor(.primary)
-                }
-            }
-
-        case .current:
-            ForEach(self.viewModel.currentSensorReadings, id: \.id) { sensor in
-                let isSelected = self.viewModel.selectedCurrentReadings.contains(sensor.name)
-                Button {
-                    if isSelected {
-                        self.viewModel.selectedCurrentReadings.remove(sensor.name)
-                    } else {
-                        self.viewModel.selectedCurrentReadings.insert(sensor.name)
-                    }
-                } label: {
-                    HStack {
-                        Text(sensor.name)
-                        Spacer()
-                        Text(self.viewModel.currentSensorReadings.firstIndex(where: { $0.id == sensor.id }).flatMap { idx in
-                            idx < self.viewModel.formattedCurrents.count ? self.viewModel.formattedCurrents[idx] : nil
-                        } ?? "\(sensor.current) A")
-
-                        if isSelected {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .foregroundColor(.primary)
-                }
-            }
-
-        case .memory:
-            if self.viewModel.memoryStats != nil {
-                ForEach(MemoryMetricType.allCases, id: \.self) { metricType in
-                    let isSelected = self.viewModel.selectedMemoryItems.contains(metricType.rawValue)
-                    Button {
-                        if isSelected {
-                            self.viewModel.selectedMemoryItems.remove(metricType.rawValue)
-                        } else {
-                            self.viewModel.selectedMemoryItems.insert(metricType.rawValue)
-                        }
-                    } label: {
-                        HStack {
-                            Text(metricType.name)
-                            Spacer()
-                            if metricType.rawValue < self.viewModel.formattedMemoryValues.count {
-                                Text(self.viewModel.formattedMemoryValues[metricType.rawValue])
-                            }
-
-                            if isSelected {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        .foregroundColor(.primary)
-                    }
-                }
-            } else {
-                Text("No memory stats available")
-                    .foregroundColor(.gray)
-                    .italic()
-            }
-
-        case .cpu:
-            if self.viewModel.cpuStats != nil {
-                ForEach(CPUMetricType.allCases, id: \.self) { metricType in
-                    let isSelected = self.viewModel.selectedCPUItems.contains(metricType.rawValue)
-                    Button {
-                        if isSelected {
-                            self.viewModel.selectedCPUItems.remove(metricType.rawValue)
-                        } else {
-                            self.viewModel.selectedCPUItems.insert(metricType.rawValue)
-                        }
-                    } label: {
-                        HStack {
-                            Text(metricType.name)
-                            Spacer()
-                            if metricType.rawValue < self.viewModel.formattedCPUValues.count {
-                                Text(self.viewModel.formattedCPUValues[metricType.rawValue])
-                            }
-
-                            if isSelected {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        .foregroundColor(.primary)
-                    }
-                }
-            } else {
-                Text("No CPU stats available")
-                    .foregroundColor(.gray)
-                    .italic()
-            }
-
-        case .disk:
-            if self.viewModel.diskStats != nil {
-                ForEach(DiskMetricType.allCases, id: \.self) { metricType in
-                    let isSelected = self.viewModel.selectedDiskItems.contains(metricType.rawValue)
-                    Button {
-                        if isSelected {
-                            self.viewModel.selectedDiskItems.remove(metricType.rawValue)
-                        } else {
-                            self.viewModel.selectedDiskItems.insert(metricType.rawValue)
-                        }
-                    } label: {
-                        HStack {
-                            Text(metricType.name)
-                            Spacer()
-                            if metricType.rawValue < self.viewModel.formattedDiskValues.count {
-                                Text(self.viewModel.formattedDiskValues[metricType.rawValue])
-                            }
-
-                            if isSelected {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        .foregroundColor(.primary)
-                    }
-                }
-            } else {
-                Text("No disk stats available")
-                    .foregroundColor(.gray)
-                    .italic()
-            }
-
-        case .system:
-            // System items are not selectable, just display information
-            let items = [
-                ("Thermal State", viewModel.thermalState.rawValue),
-                ("Uptime", self.viewModel.uptimeText),
-                ("Device Type", ProcessInfo.processInfo.isiOSAppOnMac ? "Mac" : "iOS Device"),
-                ("OS Version", ProcessInfo.processInfo.operatingSystemVersionString)
-            ]
-
-            ForEach(0..<items.count, id: \.self) { index in
-                HStack {
-                    Text(items[index].0)
-                    Spacer()
-                    Text(items[index].1)
-                }
-                .padding(.vertical, 4)
-            }
+            return TelemetryTheme.localizedThermalState(viewModel.thermalState.rawValue)
         }
     }
 }

@@ -1,0 +1,35 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSLocalNetworkUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used to probe your local router and serve the live ArkDieHuD web dashboard to your PC or Mac browser."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se utiliza para sondear tu router local y mostrar el panel web en vivo de ArkDieHuD en el navegador de tu PC o Mac."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usado para sondar seu roteador local e exibir o painel ao vivo do ArkDieHuD no navegador do seu PC ou Mac."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usado para sondar seu roteador local e exibir o painel ao vivo do ArkDieHuD no navegador do seu PC ou Mac."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

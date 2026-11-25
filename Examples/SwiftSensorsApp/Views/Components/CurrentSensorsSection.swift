@@ -8,7 +8,7 @@ struct CurrentSensorsSection: View {
     var viewModel: SensorsViewModel
 
     var body: some View {
-        Section(header: Text("Current Sensors")) {
+        Section(header: Text(L10n.tr("Current Sensors"))) {
             ForEach(
                 Array(zip(self.viewModel.currentSensorReadings.indices, self.viewModel.currentSensorReadings)),
                 id: \.1.id
@@ -20,8 +20,8 @@ struct CurrentSensorsSection: View {
             }
 
             if self.viewModel.currentSensorReadings.isEmpty {
-                Text("No current sensors found")
-                    .foregroundColor(.gray)
+                Text(L10n.tr("No current sensors found"))
+                    .foregroundStyle(.secondary)
                     .italic()
             }
         }

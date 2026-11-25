@@ -12,6 +12,7 @@
 
 /* Begin PBXFileReference section */
 		35B5FEE72B18D12F00361823 /* SwiftSensorsApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftSensorsApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D42D8C50010024B6CF /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +35,7 @@
 			isa = PBXGroup;
 			children = (
 				18605E692D8C4FAD0024B6CF /* SwiftSensorsApp */,
+				A1B2C3D42D8C50010024B6CF /* Signing.xcconfig */,
 				35B5FEE82B18D12F00361823 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -94,10 +96,13 @@
 			knownRegions = (
 				en,
 				Base,
+				"pt-BR",
+				pt,
+				es,
 			);
 			mainGroup = 35B5FEDE2B18D12F00361823;
 			packageReferences = (
-				18605E422D8C4F980024B6CF /* XCLocalSwiftPackageReference "../../swift-sensors" */,
+				18605E422D8C4F980024B6CF /* XCLocalSwiftPackageReference ".." */,
 			);
 			productRefGroup = 35B5FEE82B18D12F00361823 /* Products */;
 			projectDirPath = "";
@@ -250,6 +255,7 @@
 		};
 		35B5FF0C2B18D13000361823 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1B2C3D42D8C50010024B6CF /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -257,11 +263,11 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = 63TG84TE66;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -271,7 +277,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.SwiftSensorsApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cristianark.SwiftSensorsApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -285,6 +291,7 @@
 		};
 		35B5FF0D2B18D13000361823 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1B2C3D42D8C50010024B6CF /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -292,11 +299,11 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = 63TG84TE66;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -306,7 +313,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.SwiftSensorsApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cristianark.SwiftSensorsApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -342,9 +349,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		18605E422D8C4F980024B6CF /* XCLocalSwiftPackageReference "../../swift-sensors" */ = {
+		18605E422D8C4F980024B6CF /* XCLocalSwiftPackageReference ".." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../swift-sensors";
+			relativePath = "..";
 		};
 /* End XCLocalSwiftPackageReference section */
 

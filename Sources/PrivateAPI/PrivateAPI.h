@@ -33,4 +33,12 @@ IOHIDFloat IOHIDEventGetFloatValue(IOHIDEventRef _Nonnull event, int32_t field);
 CFIndex CFArrayGetCount(CFArrayRef _Nonnull theArray);
 const void * _Nullable CFArrayGetValueAtIndex(CFArrayRef _Nonnull theArray, CFIndex idx);
 
+/// Single-pass IOHID sensor reader that retains/releases every CoreFoundation reference safely.
+NSDictionary<NSString *, NSNumber *> * _Nonnull IOHIDReadSensorValues(
+    int32_t page,
+    int32_t usage,
+    int64_t eventType,
+    int32_t fieldBase
+);
+
 #endif /* PrivateAPI_h */

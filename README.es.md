@@ -1,0 +1,84 @@
+<p align="center">
+  <img src="Media/arkdiehud_github_banner.png" alt="ArkDieHuD — Banner de Telemetría Apple Silicon y Red" width="100%">
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> | <a href="README.pt-BR.md">Português (BR)</a> | <strong>Español</strong>
+</p>
+
+# ArkDieHuD
+
+[![Plataforma](https://img.shields.io/badge/Plataforma-iPadOS%2017%2B-black)](https://swift.org/platforms/)
+[![Swift](https://img.shields.io/badge/Swift-5.0%20%2F%206.0-orange)](https://swift.org)
+[![Idiomas](https://img.shields.io/badge/Idiomas-ES%20%7C%20PT--BR%20%7C%20EN-38bdf8)](docs/TUTORIAL.es.md)
+[![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-34D399)](LICENSE)
+
+**ArkDieHuD** es una suite de telemetría física en tiempo real para **Apple Silicon (iPadOS e iOS)** construida sobre el motor `SwiftSensors` (`IOHID` + kernel `Mach`), con HUD flotante Picture-in-Picture (`PiP`), panel **Slide Over**, Sonda Doble Multiprotocolo (**`ICMP + UDP DNS 53 + TCP`**), historial continuo de **24h en SQLite WAL** y panel web local (**`:8787`**) para monitorear desde tu PC o Mac **sin tapar la pantalla del juego**.
+
+> **¿Primera vez?** Consulta el **[Tutorial Paso a Paso (ES)](docs/TUTORIAL.es.md)** · **[Tutorial (PT-BR)](docs/TUTORIAL.pt-BR.md)** · **[Tutorial (EN)](docs/TUTORIAL.md)**
+
+---
+
+## Características Principales
+
+- **Sensores Físicos Reales (`IOHID` + `Mach`):** temperatura directa del die de CPU (`PMU tdie`) y GPU (`PMU2 tdie`), rieles de voltaje/corriente, potencia (`W`), carga de CPU, RAM + margen Jetsam y estado térmico de iPadOS — cero valores inventados.
+- **HUD Flotante PiP + Personalización Total:** 4 diseños dinámicos (*Barra Gamer*, *Overlay Gamer*, *Cuadrícula Compacta*, *Detallado*) y **12 interruptores independientes** con 4 perfiles de un toque, además de modo **Slide Over**.
+- **Red Competitiva (Sonda Doble y Multiprotocolo):** ping nativo `SOCK_DGRAM` **ICMP**, sonda real **UDP (DNS 53)** y **TCP** en paralelo contra el **Router Local (Gateway)** para distinguir caídas de Wi-Fi frente a caídas del proveedor/CGNAT, con `P50/P95/P99`, Jitter RFC 3550 y registro de incidentes de 1 hora.
+- **Historial Persistente 24h (SQLite WAL):** escritura por lotes cada 15s con limpieza automática > 24h, gráficos agregados (`15m | 1h | 6h | 24h`) y exportación CSV unificada.
+- **Monitor en PC/Mac Sin PiP en Pantalla (`:8787`):** panel web offline servido directo desde el iPad por Wi-Fi o cable USB (`iproxy 8787 8787`), con modo **PiP Discreto** (*Arrastra al borde p/ ocultar y seguir activo*) para juegos con micrófono de voz.
+- **Soporte Automático en 3 Idiomas (`es` / `pt-BR` / `en`):** detección automática según el idioma de iPadOS en la app, PiP y permisos, más detección automática y selector manual (`EN | PT | ES`) en el panel web del PC.
+- **Listo para Apple ID Gratuito:** entitlements limpios y generador de `.ipa` sin firma (`./Scripts/export-ipa.sh`).
+
+---
+
+## Capturas Reales en iPad
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="Media/screenshots/dashboard_live.png" alt="Panel Principal ArkDieHuD" width="100%">
+      <p align="center"><em>Panel Principal + Franja en Vivo y Vista Previa PiP</em></p>
+    </td>
+    <td width="50%">
+      <img src="Media/screenshots/pip_and_metal_hud.png" alt="PiP sobre PUBG + Metal HUD" width="100%">
+      <p align="center"><em>Barra Gamer PiP + Apple Metal FPS HUD sobre PUBG</em></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="Media/screenshots/logs_24h.png" alt="Historial 24h SQLite WAL" width="100%">
+      <p align="center"><em>Gráficos Persistentes 24h (SQLite WAL) y Exportación CSV</em></p>
+    </td>
+    <td width="50%">
+      <img src="Media/screenshots/pc_stealth_pip.png" alt="PiP Discreto Monitor PC" width="100%">
+      <p align="center"><em>Píldora Discreta para Monitor PC (:8787) — Arrastra al borde</em></p>
+    </td>
+  </tr>
+</table>
+
+---
+
+## Inicio Rápido
+
+```bash
+# 1) Clonar el repositorio
+git clone https://github.com/Despensativo/ArkDieHuD.git
+cd ArkDieHuD
+
+# 2) Generar .ipa para cuenta gratuita de Apple (Sideloadly / AltStore / SideStore)
+./Scripts/export-ipa.sh
+
+# 3) Opcional: Abrir un juego en el iPad con Apple Metal Performance HUD (FPS real)
+./launch_metal_hud.sh flash
+./launch_metal_hud.sh
+
+# 4) Opcional: Túnel USB para abrir el panel PC en http://127.0.0.1:8787
+iproxy 8787 8787
+```
+
+---
+
+## Nota sobre APIs Privadas y Créditos
+
+- Este proyecto utiliza APIs privadas `IOKit` / `IOHID` para acceder a sensores internos del hardware. Está pensado para diagnóstico local, benchmarks y compilación personal en Modo Desarrollador (no para App Store).
+- Basado originalmente en [`trymirai/swift-sensors`](https://github.com/trymirai/swift-sensors) bajo licencia MIT. Consulta [LICENSE](LICENSE).

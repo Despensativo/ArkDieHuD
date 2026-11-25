@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# pre-commit — Revisão contínua offline rápida (< 2s) para swift-sensors
+# ==============================================================================
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+STAGED_FILES="$(git -C "$REPO_ROOT" diff --cached --name-only --diff-filter=ACM || true)"
+
+if [ -z "$STAGED_FILES" ]; then
+    exit 0
+fi
+
+# ------------------------------------------------------------------------------
+# 1. Privacidade e Segredos (arquivos sensíveis + diff staged)
+# ------------------------------------------------------------------------------
+BLOCKED_NAMES="$(printf "%s\n" "$STAGED_FILES" | grep -E '\.(db|sqlite|sqlite3|p12|mobileprovision)$|(^|/)\.env$' || true)"
+if [ -n "$BLOCKED_NAMES" ]; then
+    echo "❌ pre-commit bloqueado: arquivos locais/sensíveis não devem ser versionados:" >&2
+    printf "%s\n" "$BLOCKED_NAMES" | sed 's/^/   - /' >&2
+    exit 1
+fi
+
+SECRET_DIFF="$(git -C "$REPO_ROOT" diff --cached -U0 -- . ':!Scripts/hooks/pre-commit' ':!Scripts/ralph-loop.sh' ':!Scripts/static-audit.sh' \
+    | grep -E '^\+' \
+    | grep -vE '^\+\+\+' \
+    | grep -E '0000[0-9A-F]{4}-[0-9A-F]{16}|-----BEGIN .*PRIVATE KEY-----|(ghp_|github_pat_|sk-[A-Za-z0-9]{20,})' || true)"
+
+if [ -n "$SECRET_DIFF" ]; then
+    echo "❌ pre-commit bloqueado: detectado possível UDID pessoal, chave privada ou token no diff staged." >&2
+    echo "   Use variáveis de ambiente ou arquivos locais não versionados (.xcconfig)." >&2
+    exit 1
+fi
+
+# ------------------------------------------------------------------------------
+# 2. Swift-Format Lint Offline nos arquivos Swift staged
+# ------------------------------------------------------------------------------
+SWIFT_FILES="$(printf "%s\n" "$STAGED_FILES" | grep '\.swift$' || true)"
+if [ -n "$SWIFT_FILES" ] && [ -f "$REPO_ROOT/.swift-format" ]; then
+    SWIFT_LINT_ERR=0
+    while IFS= read -r rel_path; do
+        [ -z "$rel_path" ] && continue
+        full_path="$REPO_ROOT/$rel_path"
+        [ -f "$full_path" ] || continue
+
+        set +e
+        lint_out="$(xcrun swift-format lint --configuration "$REPO_ROOT/.swift-format" "$full_path" 2>&1)"
+        lrc=$?
+        set -e
+
+        if [ -n "$lint_out" ]; then
+            printf "%s\n" "$lint_out" | sed "s|$REPO_ROOT/||g"
+        fi
+        if [ "$lrc" -ne 0 ] || printf "%s\n" "$lint_out" | grep -q ": error:"; then
+            SWIFT_LINT_ERR=1
+        fi
+    done <<< "$SWIFT_FILES"
+
+    if [ "$SWIFT_LINT_ERR" -ne 0 ]; then
+        echo "❌ pre-commit bloqueado: erro de sintaxe ou violação crítica do swift-format." >&2
+        exit 1
+    fi
+fi
+
+# ------------------------------------------------------------------------------
+# 3. Validação de Scripts (*.sh) conforme o shebang real
+# ------------------------------------------------------------------------------
+SH_FILES="$(printf "%s\n" "$STAGED_FILES" | grep '\.sh$' || true)"
+if [ -n "$SH_FILES" ]; then
+    PYTHON_BIN="$(command -v python3 || true)"
+    if [ -z "$PYTHON_BIN" ] && [ -x "$HOME/.antigravity-tools-env/bin/python3" ]; then
+        PYTHON_BIN="$HOME/.antigravity-tools-env/bin/python3"
+    fi
+
+    while IFS= read -r rel_path; do
+        [ -z "$rel_path" ] && continue
+        full_path="$REPO_ROOT/$rel_path"
+        [ -f "$full_path" ] || continue
+
+        first_line="$(head -n 1 "$full_path" || true)"
+        if printf "%s" "$first_line" | grep -qi "python"; then
+            if [ -n "$PYTHON_BIN" ]; then
+                "$PYTHON_BIN" -m py_compile "$full_path"
+            else
+                echo "⚠️  python3 indisponível para validar $rel_path." >&2
+            fi
+        else
+            bash -n "$full_path"
+        fi
+    done <<< "$SH_FILES"
+fi
+
+# ------------------------------------------------------------------------------
+# 4. Alerta Spec-Driven (não bloqueante) para arquivos > 300 linhas
+# ------------------------------------------------------------------------------
+if [ -n "$SWIFT_FILES" ]; then
+    while IFS= read -r rel_path; do
+        [ -z "$rel_path" ] && continue
+        full_path="$REPO_ROOT/$rel_path"
+        [ -f "$full_path" ] || continue
+        lines="$(wc -l < "$full_path" | tr -d ' ')"
+        if [ "$lines" -gt 300 ]; then
+            echo "ℹ️  [Spec-Driven] $rel_path possui $lines linhas (>300). Confirme o Mini-Plano de Impacto (.agents/skills/spec-impact/SKILL.md)."
+        fi
+    done <<< "$SWIFT_FILES"
+fi
+
+exit 0

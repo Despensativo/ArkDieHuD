@@ -14,9 +14,9 @@ struct TemperatureStats: View {
 
     var body: some View {
         HStack(spacing: 20) {
-            StatBox(title: "Min", value: String(format: "%.1f°C", self.minTemperature))
-            StatBox(title: "Avg", value: String(format: "%.1f°C", self.avgTemperature))
-            StatBox(title: "Max", value: String(format: "%.1f°C", self.maxTemperature))
+            StatBox(title: L10n.tr("Min"), value: String(format: "%.1f°C", self.minTemperature))
+            StatBox(title: L10n.tr("Avg"), value: String(format: "%.1f°C", self.avgTemperature))
+            StatBox(title: L10n.tr("Max"), value: String(format: "%.1f°C", self.maxTemperature))
         }
         .padding()
     }

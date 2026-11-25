@@ -11,7 +11,7 @@ struct SensorSelector: View {
 
     var body: some View {
         List {
-            Section(header: Text("Select Sensors")) {
+            Section(header: Text(L10n.tr("Select Sensors"))) {
                 ForEach(self.availableSensors, id: \.self) { sensor in
                     Button(action: {
                         if self.selectedSensors.contains(sensor) {

@@ -126,6 +126,30 @@ public actor SwiftSensors {
         return "\(await self.formatter.formatPercentage(usedPercentage)) (\(await self.formatter.formatBytes(stats.usedSpace)) of \(await self.formatter.formatBytes(stats.totalSpace)))"
     }
 
+    // MARK: - Thread CPU & Scheduling Monitor
+
+    /// Get thread-level CPU profiling and scheduler metrics
+    public func getThreadCPUSummary() async -> ProcessThreadSummary {
+        await ThreadCPUMonitor.shared.collectThreadMetrics()
+    }
+
+    // MARK: - Mach VM & Jetsam Monitor
+
+    /// Get low-level Mach VM metrics and Jetsam danger ratio
+    public func getVMMemoryMetrics() async -> VMMemoryMetrics {
+        await VMMemoryMonitor.shared.getVMMetrics()
+    }
+
+    /// Scan Mach Virtual Address Space for large writable memory regions
+    public func scanLargeVMRegions(minSizeBytes: UInt64 = 1_048_576) async -> [VMRegionInfo] {
+        await VMMemoryMonitor.shared.scanLargeVMRegions(minSizeBytes: minSizeBytes)
+    }
+
+    /// Trigger preventative memory purge across registered handlers
+    public func triggerEmergencyPurge() async {
+        await VMMemoryMonitor.shared.executePurge()
+    }
+
     // MARK: - System Info
 
     /// Get current thermal state
@@ -162,5 +186,57 @@ public actor SwiftSensors {
     /// - Returns: Device type string
     public func getDeviceType() async -> String {
         await self.systemStatsManager.getDeviceType()
+    }
+
+    // MARK: - Real-Time Network Quality & Packet Loss SLA
+
+    /// Get current network quality metrics (Ping, Jitter, 1s Loss, 60s/120s Loss, and Throughput)
+    public func getNetworkQualityMetrics() async -> NetworkQualityMetrics {
+        await NetworkQualityMonitor.shared.getCurrentMetrics()
+    }
+
+    /// Set the destination server for network quality and packet loss probing
+    public func setNetworkProbeTarget(_ target: NetworkProbeTarget) async {
+        await NetworkQualityMonitor.shared.setTarget(target)
+    }
+
+    /// Get the active destination probe server
+    public func getNetworkProbeTarget() async -> NetworkProbeTarget {
+        await NetworkQualityMonitor.shared.getTarget()
+    }
+
+    /// Reset session packet loss counters
+    public func resetNetworkStats() async {
+        await NetworkQualityMonitor.shared.resetStats()
+    }
+
+    /// Get rolling dual-probe network history (external target vs local gateway router, up to 1 hour)
+    public func getNetworkProbeHistory(limit: Int = 3600) async -> [NetworkProbeSample] {
+        await NetworkQualityMonitor.shared.getHistorySamples(limit: limit)
+    }
+
+    /// Get chronological incident log (ISP drops, local drops, bursts, spikes, route changes)
+    public func getNetworkIncidents() async -> [NetworkIncidentEvent] {
+        await NetworkQualityMonitor.shared.getIncidents()
+    }
+
+    /// Configure custom gateway IP override (pass nil for automatic router detection)
+    public func setNetworkGatewayHost(_ host: String?) async {
+        await NetworkQualityMonitor.shared.setCustomGatewayHost(host)
+    }
+
+    /// Configure preferred probe transport protocol (Simultaneous, Auto, ICMP, UDP, or TCP)
+    public func setNetworkProbeProtocol(_ proto: NetworkProbeProtocol) async {
+        await NetworkQualityMonitor.shared.setProtocolPreference(proto)
+    }
+
+    /// Ensures UDP probing is enabled (switches to Simultaneous ICMP+UDP+TCP if currently on a non-UDP mode)
+    public func ensureNetworkUDPProbingEnabled() async {
+        await NetworkQualityMonitor.shared.ensureUDPProbingEnabled()
+    }
+
+    /// Export full network diagnostics summary, incident timeline, and sample history as CSV
+    public func exportNetworkDiagnosticsCSV() async -> String {
+        await NetworkQualityMonitor.shared.exportDiagnosticsCSV()
     }
 }

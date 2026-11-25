@@ -14,17 +14,17 @@ struct ChartNavigationSection: View {
             Button {
                 self.onTemperatureChartsSelected()
             } label: {
-                Text("View Temperature Charts")
+                Text(L10n.tr("View Temperature Charts"))
                     .font(.headline)
-                    .foregroundColor(.blue)
+                    .foregroundStyle(Color.accentColor)
             }
 
             Button {
                 self.onPowerChartsSelected()
             } label: {
-                Text("View Power Charts")
+                Text(L10n.tr("View Power Charts"))
                     .font(.headline)
-                    .foregroundColor(.blue)
+                    .foregroundStyle(Color.accentColor)
             }
         }
     }

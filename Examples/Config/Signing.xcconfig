@@ -1,0 +1,5 @@
+// Optional local signing override (gitignored).
+// Create Examples/Config/LocalSigning.xcconfig with:
+//   DEVELOPMENT_TEAM = YOUR_TEAM_ID
+//   PRODUCT_BUNDLE_IDENTIFIER = com.yourname.ArkDieHuD
+#include? "LocalSigning.xcconfig"

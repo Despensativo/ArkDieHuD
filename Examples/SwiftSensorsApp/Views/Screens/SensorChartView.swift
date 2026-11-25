@@ -12,12 +12,12 @@ struct SensorChartView: View {
             if !self.viewModel.selectedThermalReadings.isEmpty {
                 MultiSensorChart()
             } else {
-                Text("Select readings on the Thermal Readings screen to view chart data")
-                    .foregroundColor(.gray)
+                Text(L10n.tr("Select readings on the Thermal Readings screen to view chart data"))
+                    .foregroundStyle(.secondary)
                     .padding()
                     .multilineTextAlignment(.center)
             }
         }
-        .navigationTitle("Temperature Chart")
+        .navigationTitle(L10n.tr("Temperature Chart"))
     }
 }

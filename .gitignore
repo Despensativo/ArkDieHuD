@@ -10,6 +10,7 @@ xcuserdata/
 
 ## App packaging
 *.ipa
+dist/
 *.dSYM.zip
 *.dSYM
 
@@ -62,3 +63,10 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 .swiftpm
 *.DS_Store
+
+# Local signing overrides (never commit personal Apple Team IDs)
+Examples/Config/LocalSigning.xcconfig
+
+# Python caches
+__pycache__/
+*.pyc

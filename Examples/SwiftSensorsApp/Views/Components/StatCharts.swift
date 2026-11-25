@@ -13,7 +13,7 @@ struct MemoryChart: View {
     var body: some View {
         BaseChartView(
             data: self.viewModel.filteredMemoryData(timeWindow: self.timeWindow),
-            yAxisTitle: "Memory",
+            yAxisTitle: L10n.tr("Memory"),
             formatYValue: { self.formatBytes(UInt64($0)) },
             timeWindow: self.$timeWindow
         )
@@ -42,7 +42,7 @@ struct CPUChart: View {
     var body: some View {
         BaseChartView(
             data: self.viewModel.filteredCPUData(timeWindow: self.timeWindow),
-            yAxisTitle: "CPU Usage",
+            yAxisTitle: L10n.tr("CPU Usage"),
             formatYValue: { "\(Int($0))%" },
             timeWindow: self.$timeWindow
         )
@@ -64,7 +64,7 @@ struct DiskChart: View {
     var body: some View {
         BaseChartView(
             data: self.viewModel.filteredDiskData(timeWindow: self.timeWindow),
-            yAxisTitle: "Disk Space",
+            yAxisTitle: L10n.tr("Disk Space"),
             formatYValue: { self.formatBytes(UInt64($0)) },
             timeWindow: self.$timeWindow
         )

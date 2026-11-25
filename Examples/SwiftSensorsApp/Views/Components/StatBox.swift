@@ -13,9 +13,10 @@ struct StatBox: View {
         VStack {
             Text(self.title)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text(self.value)
                 .font(.headline)
+                .monospacedDigit()
         }
         .frame(minWidth: 80)
         .padding(.vertical, 8)
