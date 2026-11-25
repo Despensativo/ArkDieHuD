@@ -289,6 +289,12 @@ enum TelemetryWebDashboardHTML {
       <option value="0.22">Size: Medium (0.22)</option>
       <option value="0.28">Size: Large (0.28)</option>
     </select>
+    <select id="hudOpacitySelect" class="hud-sel" aria-label="HUD Opacity">
+      <option value="" id="optOpacity100" selected>Opacity: 100%</option>
+      <option value="0.6" id="optOpacity60">Opacity: 60%</option>
+      <option value="0.3" id="optOpacity30">Opacity: 30%</option>
+      <option value="0" id="optOpacity0">Invisible (Web Only)</option>
+    </select>
   </div>
   <div class="hud-checks" role="group" aria-label="Metal HUD Metrics">
     <label class="hud-chk"><input type="checkbox" data-hud-el="fps" checked> FPS</label>
@@ -331,6 +337,10 @@ const I18N = {
     presetFpsGpu: "FPS + GPU + Graphs",
     presetMinimal: "Minimal (FPS + GPU)",
     presetFull: "Apple Full",
+    optOpacity100: "Opacity: 100%",
+    optOpacity60: "Opacity: 60%",
+    optOpacity30: "Opacity: 30%",
+    optOpacity0: "Invisible (Web Only)",
     streamWebLabel: "Stream FPS to Web Monitor + 24h Log",
     fpsWaitingHint: "Run --stream-web launcher",
     gameFPS: "Game FPS",
@@ -412,6 +422,10 @@ const I18N = {
     presetFpsGpu: "FPS + GPU + Gráficos",
     presetMinimal: "Mínimo (FPS + GPU)",
     presetFull: "Completo Apple",
+    optOpacity100: "Opacidade: 100%",
+    optOpacity60: "Opacidade: 60%",
+    optOpacity30: "Opacidade: 30%",
+    optOpacity0: "Invisível (Só Web)",
     streamWebLabel: "Enviar FPS ao Painel Web + Log 24h",
     fpsWaitingHint: "Aguardando --stream-web",
     gameFPS: "FPS do Jogo",
@@ -485,6 +499,10 @@ const I18N = {
     presetFpsGpu: "FPS + GPU + Gráficos",
     presetMinimal: "Mínimo (FPS + GPU)",
     presetFull: "Completo Apple",
+    optOpacity100: "Opacidad: 100%",
+    optOpacity60: "Opacidad: 60%",
+    optOpacity30: "Opacidad: 30%",
+    optOpacity0: "Invisible (Solo Web)",
     streamWebLabel: "Enviar FPS al Monitor Web + Log 24h",
     fpsWaitingHint: "Esperando --stream-web",
     gameFPS: "FPS del Juego",
@@ -586,11 +604,13 @@ function getSelectedHudParams() {
     .map(cb => cb.dataset.hudEl);
   const alignEl = document.getElementById("hudAlignSelect");
   const scaleEl = document.getElementById("hudScaleSelect");
+  const opacityEl = document.getElementById("hudOpacitySelect");
   const streamEl = document.getElementById("hudStreamWebToggle");
   return {
     elements: els.join(","),
     align: alignEl ? alignEl.value : "",
     scale: scaleEl ? scaleEl.value : "",
+    opacity: opacityEl ? opacityEl.value : "",
     streamWeb: Boolean(streamEl && streamEl.checked)
   };
 }
@@ -601,6 +621,7 @@ function getMacLaunchCommand() {
   if (p.elements) cmd += " --elements " + p.elements;
   if (p.align) cmd += " --align " + p.align;
   if (p.scale) cmd += " --scale " + p.scale;
+  if (p.opacity !== "") cmd += " --opacity " + p.opacity;
   if (p.streamWeb) cmd += " --stream-web " + window.location.origin;
   return cmd;
 }
@@ -613,6 +634,7 @@ function saveMetalHUDPrefs(p) {
       elements: p.elements,
       align: p.align,
       scale: p.scale,
+      opacity: p.opacity,
       streamWeb: Boolean(p.streamWeb)
     }));
   } catch (e) {}
@@ -633,6 +655,8 @@ function loadMetalHUDPrefs() {
     if (alignEl && typeof saved.align === "string") alignEl.value = saved.align;
     const scaleEl = document.getElementById("hudScaleSelect");
     if (scaleEl && typeof saved.scale === "string") scaleEl.value = saved.scale;
+    const opacityEl = document.getElementById("hudOpacitySelect");
+    if (opacityEl && typeof saved.opacity === "string") opacityEl.value = saved.opacity;
     const streamEl = document.getElementById("hudStreamWebToggle");
     if (streamEl && typeof saved.streamWeb === "boolean") streamEl.checked = saved.streamWeb;
   } catch (e) {}
@@ -647,6 +671,7 @@ function updateMetalHUDControls() {
   if (p.elements) qp.set("elements", p.elements);
   if (p.align) qp.set("align", p.align);
   if (p.scale) qp.set("scale", p.scale);
+  if (p.opacity !== "") qp.set("opacity", p.opacity);
   if (p.streamWeb) qp.set("streamWeb", "1");
   const qs = qp.toString();
   document.getElementById("dlWinBtn").href = "/download/metal-hud-windows.bat" + (qs ? "?" + qs : "");
@@ -674,6 +699,10 @@ function applyStaticTranslations() {
   document.getElementById("presetFpsGpuBtn").textContent = s.presetFpsGpu;
   document.getElementById("presetMinimalBtn").textContent = s.presetMinimal;
   document.getElementById("presetFullBtn").textContent = s.presetFull;
+  document.getElementById("optOpacity100").textContent = s.optOpacity100;
+  document.getElementById("optOpacity60").textContent = s.optOpacity60;
+  document.getElementById("optOpacity30").textContent = s.optOpacity30;
+  document.getElementById("optOpacity0").textContent = s.optOpacity0;
   document.getElementById("hudStreamWebLabel").textContent = s.streamWebLabel;
   document.getElementById("copyMacCmdBtn").textContent = s.copyMacCmd;
   updateMetalHUDControls();
@@ -1111,6 +1140,7 @@ document.querySelectorAll("input[data-hud-el]").forEach(cb => {
 document.getElementById("hudStreamWebToggle").addEventListener("change", updateMetalHUDControls);
 document.getElementById("hudAlignSelect").addEventListener("change", updateMetalHUDControls);
 document.getElementById("hudScaleSelect").addEventListener("change", updateMetalHUDControls);
+document.getElementById("hudOpacitySelect").addEventListener("change", updateMetalHUDControls);
 
 loadMetalHUDPrefs();
 applyStaticTranslations();

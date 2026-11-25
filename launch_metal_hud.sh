@@ -173,6 +173,7 @@ def build_hud_env(
     align: str | None,
     scale: str | None,
     stream_web: str | None = None,
+    opacity: str | None = None,
 ) -> dict[str, str]:
     env: dict[str, str] = {"MTL_HUD_ENABLED": "1"}
     effective_preset = preset.lower().strip() if preset else None
@@ -211,6 +212,14 @@ def build_hud_env(
                 env["MTL_HUD_SCALE"] = f"{val:g}"
         except ValueError:
             pass
+
+    if opacity is not None and opacity.strip() != "":
+        try:
+            val = float(opacity.strip())
+            if 0.0 <= val <= 1.0:
+                env["MTL_HUD_OPACITY"] = f"{val:g}"
+        except ValueError:
+            pass
     return env
 
 
@@ -243,13 +252,19 @@ def list_usbmux_udids(idevice_id_bin: str | None, network: bool = False) -> list
     return [line.strip() for line in res.stdout.splitlines() if line.strip()]
 
 
-TCP_OSTRACE_SNIPPET = (
+OSTRACE_SNIPPET = (
     "import sys\n"
-    "from pymobiledevice3.lockdown import create_using_tcp\n"
+    "from pymobiledevice3.lockdown import create_using_tcp, create_using_usbmux\n"
     "from pymobiledevice3.services.os_trace import OsTraceService\n"
     "host = sys.argv[1]\n"
     "udid = sys.argv[2] or None\n"
-    "ld = create_using_tcp(hostname=host, identifier=udid)\n"
+    "try:\n"
+    "    ld = create_using_usbmux(serial=udid) if udid else create_using_usbmux()\n"
+    "except Exception:\n"
+    "    if host:\n"
+    "        ld = create_using_tcp(hostname=host, identifier=udid)\n"
+    "    else:\n"
+    "        raise\n"
     "for entry in OsTraceService(ld).syslog():\n"
     "    msg = getattr(entry, 'message', '') or ''\n"
     "    if 'metal-HUD:' in msg:\n"
@@ -338,6 +353,12 @@ def ensure_pymobiledevice3_python() -> str | None:
 
 
 def resolve_syslog_command(udid: str, stream_web_url: str = "") -> list[str] | None:
+    pmd_py = ensure_pymobiledevice3_python()
+    if pmd_py:
+        raw_host = (urllib.parse.urlparse(stream_web_url).hostname or "").strip()
+        tcp_host = "" if raw_host in ("localhost", "127.0.0.1", "::1") else raw_host
+        return [pmd_py, "-u", "-c", OSTRACE_SNIPPET, tcp_host, udid]
+
     syslog_bin = find_tool("idevicesyslog")
     idevice_id_bin = find_tool("idevice_id")
     if syslog_bin:
@@ -349,13 +370,6 @@ def resolve_syslog_command(udid: str, stream_web_url: str = "") -> list[str] | N
         net_udids = list_usbmux_udids(idevice_id_bin, network=True)
         if udid in net_udids:
             return [syslog_bin, "-n", "-u", udid]
-
-    pmd_py = ensure_pymobiledevice3_python()
-    if pmd_py:
-        host = (urllib.parse.urlparse(stream_web_url).hostname or "").strip()
-        if host and host not in ("localhost", "127.0.0.1", "::1"):
-            return [pmd_py, "-u", "-c", TCP_OSTRACE_SNIPPET, host, udid]
-        return [pmd_py, "-m", "pymobiledevice3", "syslog", "live", "--udid", udid]
     return None
 
 
@@ -538,6 +552,7 @@ Opções:
   --elements <CSV>       Métricas MTL_HUD_ELEMENTS (ex: fps,gputime,fpsgraph,frameintervalgraph)
   --align <POS>          Posição: topleft, topright, topcenter, bottomleft, bottomright, ...
   --scale <0.0-1.0>      Tamanho do HUD (ex: 0.14, 0.18, 0.22)
+  --opacity <0.0-1.0>    Opacidade do HUD (0 = invisivel na tela, envia FPS so ao Web)
   --stream-web <URL>     Lê metal-HUD do syslog e envia FPS/VRAM/RAM ao servidor :8787
   --stream-seconds <N>   Encerra transmissão após N segundos (opcional)
 
@@ -570,7 +585,7 @@ def print_devices() -> None:
         )
 
 
-def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | None, str | None, str | None, str | None, str | None, str | None, float | None, str | None]:
+def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None, float | None, str | None]:
     show_help = False
     show_devices = False
     list_apps = False
@@ -580,6 +595,7 @@ def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | Non
     cli_elements = None
     cli_align = None
     cli_scale = None
+    cli_opacity = None
     cli_stream_web = None
     cli_stream_seconds = None
     positional = None
@@ -629,6 +645,11 @@ def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | Non
             i += 1
         elif arg.startswith("--scale="):
             cli_scale = arg.split("=", 1)[1].strip()
+        elif arg == "--opacity" and i + 1 < len(argv):
+            cli_opacity = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--opacity="):
+            cli_opacity = arg.split("=", 1)[1].strip()
         elif arg == "--stream-web" and i + 1 < len(argv):
             cli_stream_web = argv[i + 1].strip()
             i += 1
@@ -649,11 +670,11 @@ def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | Non
             positional = arg.lower().strip()
         i += 1
 
-    return show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, cli_stream_web, cli_stream_seconds, positional
+    return show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, cli_opacity, cli_stream_web, cli_stream_seconds, positional
 
 
 def main() -> None:
-    show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, cli_stream_web, cli_stream_seconds, arg = parse_args(sys.argv[1:])
+    show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, cli_opacity, cli_stream_web, cli_stream_seconds, arg = parse_args(sys.argv[1:])
 
     if show_help:
         print_help()
@@ -663,7 +684,7 @@ def main() -> None:
         print_devices()
         return
 
-    hud_env = build_hud_env(cli_preset, cli_elements, cli_align, cli_scale, cli_stream_web)
+    hud_env = build_hud_env(cli_preset, cli_elements, cli_align, cli_scale, cli_stream_web, cli_opacity)
     device_id, device_label = resolve_device_id(cli_device)
     print(f"🎯 Alvo detectado: {device_label}")
 

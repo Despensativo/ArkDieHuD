@@ -350,6 +350,7 @@ actor TelemetryWebServer {
             let elementsParam = components?.queryItems?.first(where: { $0.name == "elements" })?.value
             let alignParam = components?.queryItems?.first(where: { $0.name == "align" })?.value
             let scaleParam = components?.queryItems?.first(where: { $0.name == "scale" })?.value
+            let opacityParam = components?.queryItems?.first(where: { $0.name == "opacity" })?.value
             let streamWebParam = components?.queryItems?.first(where: { $0.name == "streamWeb" })?.value
             let streamWebURL = (streamWebParam == "1" || streamWebParam == "true")
                 ? "http://\(effectiveHost)"
@@ -359,7 +360,8 @@ actor TelemetryWebServer {
                 elements: elementsParam,
                 align: alignParam,
                 scale: scaleParam,
-                streamWebURL: streamWebURL
+                streamWebURL: streamWebURL,
+                opacity: opacityParam
             )
             return Self.httpResponse(
                 status: "200 OK",

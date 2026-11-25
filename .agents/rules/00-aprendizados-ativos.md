@@ -14,3 +14,4 @@ trigger: always_on
 - **Privacidade absoluta -> zero IDs literais versionados**: Nunca gravar UDIDs de dispositivo, `DEVELOPMENT_TEAM`, e-mails pessoais ou tokens em código, scripts, regras ou documentação.
 - **Identidade Git padronizada -> proibido hostname local**: Commits neste repositório devem usar identidade genérica pública (`Despensativo <137121462+Despensativo@users.noreply.github.com>`), nunca expondo usuário/hostname da rede local (`User` ou `@*.lan` / `@*.local`).
 - **Operação Git -> confirmar raiz do repositório**: Sempre executar `git -C` dentro de `swift-sensors/` (nunca na pasta pai `/Volumes/--400GB--/FEITOS COM IA/Ipad`).
+- **`idevicesyslog` trava sem `os_log` no iPadOS 27+ -> priorizar `OsTraceService`**: Na ponte `--stream-web`, priorizar `pymobiledevice3` `OsTraceService` (`create_using_usbmux` com fallback `create_using_tcp`), mantendo `idevicesyslog` apenas como fallback offline.
