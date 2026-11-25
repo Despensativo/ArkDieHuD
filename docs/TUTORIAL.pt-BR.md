@@ -142,6 +142,11 @@ Você pode abrir **qualquer jogo ou aplicativo instalado no iPhone/iPad** com o 
 
 Consulte [METAL_HUD_GUIDE.md](METAL_HUD_GUIDE.md) para detalhes de pareamento.
 
+> **Dica — Deixar o Metal HUD 100% Invisível na Tela (Só Web `:8787`) ou Restaurar Opacidade:**
+> 1. No iPad/iPhone, abra **Ajustes → Desenvolvedor → Graphics HUD** e mantenha **Show Graphics HUD** **desligado**.
+> 2. **Para tirar a opacidade (tela limpa mesmo saindo/voltando do jogo):** arraste **Opacidade (`HUD Opacity`)** até **0%** nos Ajustes e escolha **`Invisível (Só Web)`** no painel `:8787` (mantenha o Terminal / `.bat` aberto para enviar o FPS ao vivo).
+> 3. **Para checar ou voltar a ver na tela:** suba **Opacidade (`HUD Opacity`)** novamente para **100%** nos Ajustes e mude para **`Opacidade: 100%`** no painel `:8787`.
+
 ---
 
 ## 7. Suporte Automático a 3 Idiomas (`PT-BR` / `EN` / `ES`)

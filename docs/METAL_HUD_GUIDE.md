@@ -97,7 +97,24 @@ xcrun devicectl device copy from \
 
 ---
 
-## 6. Solução de Problemas
+## 6. Passo a Passo: Deixar o Metal HUD 100% Invisível na Tela (Só Web `:8787`) ou Restaurar Opacidade
+
+Quando um jogo vai para segundo plano e volta para a tela no iOS/iPadOS, o sistema recria a camada Metal aplicando o controle nativo de **Opacidade** salvo em **Ajustes → Desenvolvedor → Graphics HUD** — **mesmo quando a chave `Show Graphics HUD` está desligada**.
+
+### Para tirar 100% a opacidade (tela limpa mesmo saindo e voltando do jogo):
+1. No iPad/iPhone, abra **Ajustes → Desenvolvedor → Graphics HUD** (*Settings → Developer → Graphics HUD*).
+2. Mantenha **Show Graphics HUD** **desligado** (*OFF*).
+3. Arraste o controle de **Opacidade (`HUD Opacity`)** até **0% (mínimo)**.
+4. No painel Web **`:8787`**, selecione **`Invisível (Só Web)`** (ou passe `--opacity 0` no comando) e mantenha a janela do Terminal / `.bat` aberta enquanto joga. O FPS, ms/quadro, VRAM e RAM continuarão carregando ao vivo no navegador e nos logs 24h sem nada desenhado na tela do jogo.
+
+### Para checar ou voltar a ver o Metal HUD na tela do iPad/iPhone:
+1. Abra **Ajustes → Desenvolvedor → Graphics HUD**.
+2. Suba o controle de **Opacidade (`HUD Opacity`)** novamente (ex.: **100%**).
+3. No painel Web **`:8787`**, selecione **`Opacidade: 100%`** (ou remova `--opacity 0`) e inicie o jogo novamente pelo comando de 1 clique.
+
+---
+
+## 7. Solução de Problemas
 
 - **`O iPad está BLOQUEADO com a tela apagada` (`Locked`):** O iPadOS bloqueia abertura remota de apps com a tela travada. Desbloqueie o iPad e rode o comando novamente.
 - **`Nenhum iPad/iPhone físico pareado encontrado`:** Rode `./launch_metal_hud.sh --devices` e verifique se o iPad aparece com cabo conectado ou pareamento Wi-Fi ativo no Xcode (*Window > Devices and Simulators*).

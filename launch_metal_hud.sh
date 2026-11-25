@@ -533,7 +533,13 @@ def launch_app(
         sys.exit(1)
     else:
         print(f"✅ {name} iniciado com sucesso no dispositivo!")
-        print("📊 O Metal Performance HUD oficial da Apple já está ativo na tela!\n")
+        if hud_env.get("MTL_HUD_OPACITY") == "0":
+            print("👻 Modo Invisível ativo na tela (MTL_HUD_OPACITY=0).")
+            print(
+                "💡 Para continuar 100% invisível mesmo ao minimizar/voltar ao jogo: no iPad/iPhone abra Ajustes -> Desenvolvedor -> Graphics HUD, mantenha desligado e arraste a Opacidade para 0% (para voltar a ver na tela, suba para 100%).\n"
+            )
+        else:
+            print("📊 O Metal Performance HUD oficial da Apple já está ativo na tela! (Se estiver invisível, cheque a Opacidade em Ajustes -> Desenvolvedor -> Graphics HUD).\n")
         if stream_web:
             stream_metal_hud_to_web(device_id, name, bundle_id, stream_web, stream_seconds)
 

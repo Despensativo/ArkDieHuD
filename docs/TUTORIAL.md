@@ -142,6 +142,11 @@ Combine **ArkDieHuD** with Apple's native GPU FPS counter (`MTL_HUD_ENABLED=1`) 
 
 See [METAL_HUD_GUIDE.md](METAL_HUD_GUIDE.md) for device pairing troubleshooting.
 
+> **Tip — Keep Apple Metal HUD 100% Invisible on Screen (`:8787` Web Only) or Restore Opacity:**
+> 1. On your iPad/iPhone, open **Settings → Developer → Graphics HUD** and keep **Show Graphics HUD** turned **OFF**.
+> 2. **To remove on-screen opacity (stays 100% invisible even after switching apps):** drag **HUD Opacity** all the way down to **0%** in Settings and select **`Invisible (Web Only)`** on `:8787` (keep Terminal / `.bat` open while playing to stream live FPS).
+> 3. **To check or show on screen again:** raise **HUD Opacity** back to **100%** in Settings and switch to **`Opacity: 100%`** on `:8787`.
+
 ---
 
 ## 7. Automatic 3-Language Support (`EN` / `PT-BR` / `ES`)

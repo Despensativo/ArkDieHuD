@@ -532,6 +532,18 @@ def devicectl_get_apps(device_id: str) -> List[dict]:
     return sorted(user_apps, key=lambda x: x.get("name", "").lower())
 
 
+def print_hud_launch_status(hud_env: Dict[str, str]) -> None:
+    if hud_env.get("MTL_HUD_OPACITY") == "0":
+        print("[HUD] Modo Invisivel ativo na tela (MTL_HUD_OPACITY=0).")
+        print(
+            "[DICA] Para continuar 100% invisivel mesmo ao minimizar/voltar ao jogo: no iPad/iPhone abra Ajustes -> Desenvolvedor -> Graphics HUD, mantenha desligado e arraste Opacidade para 0% (para voltar a ver na tela, suba para 100%)."
+        )
+    else:
+        print(
+            "[HUD] Apple Metal Performance HUD ativo na tela. (Se estiver invisivel, cheque a Opacidade em Ajustes -> Desenvolvedor -> Graphics HUD)."
+        )
+
+
 def devicectl_launch(
     device_id: str,
     name: str,
@@ -565,7 +577,7 @@ def devicectl_launch(
         print(output.strip())
         sys.exit(1)
     print(f"[OK] {name} iniciado com sucesso!")
-    print("[HUD] Apple Metal Performance HUD ativo na tela.")
+    print_hud_launch_status(hud_env)
     if stream_web:
         stream_metal_hud_to_web(device_id, name, bundle_id, stream_web, stream_seconds)
 
@@ -758,7 +770,7 @@ def pmd_launch_with_tunnel(
 
         time.sleep(2.0)
         print(f"[OK] {name} iniciado com sucesso!")
-        print("[HUD] Apple Metal Performance HUD ativo na tela.")
+        print_hud_launch_status(hud_env)
         if stream_web:
             stream_metal_hud_to_web(cli_device, name, bundle_id, stream_web, stream_seconds)
     finally:

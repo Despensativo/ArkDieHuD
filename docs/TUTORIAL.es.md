@@ -91,6 +91,11 @@ Puedes lanzar **cualquier juego o app instalado en tu iPhone/iPad** con el conta
    ```
 4. **Guardar tus propios atajos (manualmente o con una IA):** edita `CUSTOM_SHORTCUTS` al inicio de `launch_metal_hud.sh`. Si usas una IA, pídele: *"Ejecuta `./launch_metal_hud.sh --list` y añade mis juegos en `CUSTOM_SHORTCUTS` dentro de `launch_metal_hud.sh`."*
 
+> **Consejo — Dejar el Metal HUD 100% Invisible en Pantalla (Solo Web `:8787`) o Restaurar Opacidad:**
+> 1. En tu iPad/iPhone, abre **Ajustes → Desarrollador → Graphics HUD** y mantén **Show Graphics HUD** **desactivado**.
+> 2. **Para quitar la opacidad (100% invisible incluso al salir/volver al juego):** baja **HUD Opacity / Opacidad** al **0%** en Ajustes y elige **`Invisible (Solo Web)`** en `:8787` (mantén la ventana de Terminal / `.bat` abierta para enviar FPS en vivo).
+> 3. **Para revisar o volver a verlo en pantalla:** sube **HUD Opacity / Opacidad** al **100%** en Ajustes y elige **`Opacidad: 100%`** en `:8787`.
+
 ---
 
 ## 7. Detección Automática de 3 Idiomas (`ES` / `PT-BR` / `EN`)

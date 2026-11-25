@@ -6,6 +6,7 @@ import UIKit
 struct HUDDashboardSection: View {
     @Bindable var hudController: PiPHUDController
     @State private var showCustomizationSheet: Bool = false
+    @State private var showMetalHUDOpacityGuide: Bool = false
     @State private var copiedURLTrigger: Int = 0
 
     var body: some View {
@@ -184,6 +185,22 @@ struct HUDDashboardSection: View {
             Text(L10n.tr("If using in-game voice mic, open Stealth PiP and drag it off the side edge — the screen stays clean while the PC monitor remains active."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            DisclosureGroup(
+                L10n.tr("Step-by-step: check or hide Metal HUD opacity"),
+                isExpanded: self.$showMetalHUDOpacityGuide
+            ) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(L10n.tr("1. Open Settings -> Developer -> Graphics HUD (keep Show Graphics HUD turned OFF)."))
+                    Text(L10n.tr("2. To keep 100% invisible even after switching apps: drag HUD Opacity down to 0% in Settings and choose Invisible (Web Only) on :8787."))
+                    Text(L10n.tr("3. To check or show on screen again: raise HUD Opacity back to 100% in Settings and choose Opacity: 100% on :8787."))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+            }
+            .font(.caption.weight(.semibold))
+            .tint(Color.accentColor)
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
