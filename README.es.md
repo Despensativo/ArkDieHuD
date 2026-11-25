@@ -62,11 +62,11 @@
 
 | Método | ¿Para quién es? | ¿Requiere Mac / Xcode? | Cómo funciona |
 | :--- | :--- | :--- | :--- |
-| **1. Sideloadly + `.ipa`** | **Principiantes / Windows o Mac** | **No** | Descarga [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) y arrástralo en [Sideloadly](https://sideloadly.io/) con cualquier **Apple ID gratuito**. |
+| **1. Sideloadly + `.ipa`** *(Recomendado)* | **Más fácil y sencillo** (Windows o Mac, sin terminal) | **No** | Descarga [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) y arrástralo en [Sideloadly](https://sideloadly.io/) con cualquier **Apple ID gratuito**. |
 | **2. SideStore / AltStore Classic** | **Actualizaciones y renovación automáticas** | **No** *(tras configurar)* | Añade la fuente oficial en SideStore/AltStore Classic y pulsa **GET**. |
 | **3. Asistente en Mac** | **Usuarios de Mac con Xcode** | **Sí** | Ejecuta `./install.sh` — detecta iPad y Apple ID automáticamente, compila e instala. |
 
-### Opción 1 — Más Fácil (Windows o Mac, Sin Xcode)
+### Opción 1 — Más Fácil y Sencillo — Recomendado (Windows o Mac, Sin Xcode)
 1. Descarga [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa).
 2. Abre **Sideloadly**, conecta tu iPad, introduce tu **Apple ID gratuito** e instala el `.ipa`.
 3. En el iPad: activa **Ajustes → Privacidad y Seguridad → Modo de Desarrollador** y toca **Confiar** en **Ajustes → General → Gestión de VPN y Dispositivos**.

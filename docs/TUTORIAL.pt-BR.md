@@ -18,19 +18,19 @@ Bem-vindo ao **ArkDieHuD**. Este guia explica do zero como instalar o aplicativo
 2. Ative a chave, reinicie o iPad quando solicitado e confirme após ligar.
    *(Se a opção não aparecer ainda, conecte o iPad uma vez ao Mac/PC com Xcode ou Sideloadly aberto — o iPadOS libera o menu automaticamente.)*
 
-### Opção A: Catálogo Oficial no SideStore / AltStore Classic (Recomendado — Atualiza e Renova Sozinho)
-1. No **SideStore** ou **AltStore Classic** do iPad, vá em **Sources → +** e adicione:
+### Opção A: Instalar `.ipa` via Sideloadly (Mais Fácil e Simples — Recomendado, Windows ou Mac, Sem Xcode)
+1. Baixe [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) na aba **[Releases](https://github.com/Despensativo/ArkDieHuD/releases)**.
+2. Abra o **[Sideloadly](https://sideloadly.io/)** (~80 MB, funciona no Windows e no Mac), conecte o iPad/iPhone, informe seu **Apple ID gratuito** e arraste o `ArkDieHuD-unsigned.ipa`.
+3. No aparelho, vá em **Ajustes → Geral → Gestão de VPN e Dispositivo**, toque no seu Apple ID e em **Confiar**.
+
+### Opção B: Catálogo Oficial no SideStore / AltStore Classic (Atualiza e Renova Sozinho)
+1. No **SideStore** ou **AltStore Classic** do iPad/iPhone, vá em **Sources → +** e adicione:
    ```text
    https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/altstore-source.json
    ```
 2. Toque em **ArkDieHuD → GET** (usa qualquer **Apple ID gratuito**, com renovação automática dos 7 dias).
 
 > **Importante (Brasil, UE e Japão):** No site [altstore.io](https://altstore.io/), baixe o **AltStore Classic** (via AltServer) ou use o **SideStore** — **não use o AltStore PAL**. O AltStore PAL aceita apenas pacotes notarizados pela Apple (ADP) e bloqueia arquivos `.ipa` comuns e APIs privadas (`IOHID` de temperatura do silício e controles internos do PiP).
-
-### Opção B: Instalar `.ipa` via Sideloadly (Windows ou Mac — Sem Precisar de Xcode!)
-1. Baixe [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) na aba **[Releases](https://github.com/Despensativo/ArkDieHuD/releases)**.
-2. Abra o **[Sideloadly](https://sideloadly.io/)** (~80 MB, funciona no Windows e no Mac), conecte o iPad, informe seu **Apple ID gratuito** e arraste o `ArkDieHuD-unsigned.ipa`.
-3. No iPad, vá em **Ajustes → Geral → Gestão de VPN e Dispositivo**, toque no seu Apple ID e em **Confiar**.
 
 ### Opção C: Instalador Automático no Mac (`./install.sh`)
 Se você usa Mac e tem Xcode instalado:
