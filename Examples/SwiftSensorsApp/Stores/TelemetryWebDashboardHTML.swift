@@ -116,6 +116,36 @@ enum TelemetryWebDashboardHTML {
     border-color: var(--accent);
     color: var(--accent);
   }
+  .hud-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .hud-chk {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    background: #0d121c;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 9px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .hud-chk input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+  select.hud-sel {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
@@ -228,6 +258,40 @@ enum TelemetryWebDashboardHTML {
     Enable Apple's official real-time FPS / GPU / Frame Time overlay inside any game or app on your iPhone/iPad (works over Wi-Fi or USB on macOS; USB on Windows).
   </p>
   <div class="controls" style="margin-bottom:10px;">
+    <button type="button" class="active" data-hud-preset="fps-gpu" id="presetFpsGpuBtn">FPS + GPU + Graphs</button>
+    <button type="button" data-hud-preset="minimal" id="presetMinimalBtn">Minimal (FPS + GPU)</button>
+    <button type="button" data-hud-preset="full" id="presetFullBtn">Apple Full</button>
+    <select id="hudAlignSelect" class="hud-sel" aria-label="HUD Position">
+      <option value="topright" selected>Top Right</option>
+      <option value="topleft">Top Left</option>
+      <option value="topcenter">Top Center</option>
+      <option value="bottomright">Bottom Right</option>
+      <option value="bottomleft">Bottom Left</option>
+      <option value="bottomcenter">Bottom Center</option>
+      <option value="centerleft">Center Left</option>
+      <option value="centerright">Center Right</option>
+      <option value="centered">Center</option>
+    </select>
+    <select id="hudScaleSelect" class="hud-sel" aria-label="HUD Scale">
+      <option value="" selected>Size: Default</option>
+      <option value="0.14">Size: Compact (0.14)</option>
+      <option value="0.18">Size: Small (0.18)</option>
+      <option value="0.22">Size: Medium (0.22)</option>
+      <option value="0.28">Size: Large (0.28)</option>
+    </select>
+  </div>
+  <div class="hud-checks" role="group" aria-label="Metal HUD Metrics">
+    <label class="hud-chk"><input type="checkbox" data-hud-el="fps" checked> FPS</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="gputime" checked> GPU ms</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="fpsgraph" checked> FPS Graph</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="frameintervalgraph" checked> Frame Graph</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="gputimeline"> GPU Timeline</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="memory"> RAM</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="thermal"> Thermal</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="shaders"> Shaders</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="device"> GPU Name</label>
+  </div>
+  <div class="controls" style="margin-bottom:10px;">
     <button id="copyMacCmdBtn" type="button" style="border-color:var(--accent);color:var(--accent);">Copy Mac Command (1-Click)</button>
     <a id="dlWinBtn" class="btn" style="border-color:var(--green);color:var(--green);" href="/download/metal-hud-windows.bat" download>Windows (.bat)</a>
     <a id="dlPyBtn" class="btn" href="/download/arkdiehud_metal_hud.py" download>Python Script (.py)</a>
@@ -247,6 +311,9 @@ const I18N = {
     downloadCSV: "Download CSV",
     metalHudTitle: "Apple Metal FPS HUD Launcher (Mac & Windows)",
     metalHudDesc: "Enable Apple's official real-time FPS / GPU / Frame Time overlay inside any game or app on your iPhone/iPad (works over Wi-Fi or USB on macOS; USB on Windows).",
+    presetFpsGpu: "FPS + GPU + Graphs",
+    presetMinimal: "Minimal (FPS + GPU)",
+    presetFull: "Apple Full",
     copyMacCmd: "Copy Mac Command (1-Click)",
     copiedMacCmd: "Copied! Paste in Terminal",
     dlWinBtn: "Windows (.bat)",
@@ -305,6 +372,9 @@ const I18N = {
     downloadCSV: "Baixar CSV",
     metalHudTitle: "Launcher Apple Metal FPS HUD (Mac e Windows)",
     metalHudDesc: "Ative o contador oficial da Apple (FPS / GPU / Frame Time) dentro de qualquer jogo ou app no iPhone/iPad (funciona via Wi-Fi ou USB no macOS; USB no Windows).",
+    presetFpsGpu: "FPS + GPU + Gráficos",
+    presetMinimal: "Mínimo (FPS + GPU)",
+    presetFull: "Completo Apple",
     copyMacCmd: "Copiar Comando Mac (1 Clique)",
     copiedMacCmd: "Copiado! Cole no Terminal",
     dlWinBtn: "Windows (.bat)",
@@ -355,6 +425,9 @@ const I18N = {
     downloadCSV: "Descargar CSV",
     metalHudTitle: "Launcher Apple Metal FPS HUD (Mac y Windows)",
     metalHudDesc: "Activa el contador oficial de Apple (FPS / GPU / Frame Time) dentro de cualquier juego o app en tu iPhone/iPad (funciona por Wi-Fi o USB en macOS; USB en Windows).",
+    presetFpsGpu: "FPS + GPU + Gráficos",
+    presetMinimal: "Mínimo (FPS + GPU)",
+    presetFull: "Completo Apple",
     copyMacCmd: "Copiar Comando Mac (1 Clic)",
     copiedMacCmd: "¡Copiado! Pega en Terminal",
     dlWinBtn: "Windows (.bat)",
@@ -425,8 +498,53 @@ let lastIncidents = null;
 
 function t() { return I18N[currentLang] || I18N["en"]; }
 
+const HUD_PRESET_MAP = {
+  "fps-gpu": ["fps", "gputime", "fpsgraph", "frameintervalgraph"],
+  "minimal": ["fps", "gputime"],
+  "full": []
+};
+
+function getSelectedHudParams() {
+  const els = Array.from(document.querySelectorAll("input[data-hud-el]:checked"))
+    .map(cb => cb.dataset.hudEl);
+  const alignEl = document.getElementById("hudAlignSelect");
+  const scaleEl = document.getElementById("hudScaleSelect");
+  return {
+    elements: els.join(","),
+    align: alignEl ? alignEl.value : "",
+    scale: scaleEl ? scaleEl.value : ""
+  };
+}
+
 function getMacLaunchCommand() {
-  return "curl -fsSL " + window.location.origin + "/download/arkdiehud_metal_hud.py -o /tmp/arkdiehud_metal_hud.py && python3 /tmp/arkdiehud_metal_hud.py";
+  const p = getSelectedHudParams();
+  let cmd = "curl -fsSL " + window.location.origin + "/download/arkdiehud_metal_hud.py -o /tmp/arkdiehud_metal_hud.py && python3 /tmp/arkdiehud_metal_hud.py";
+  if (p.elements) cmd += " --elements " + p.elements;
+  if (p.align) cmd += " --align " + p.align;
+  if (p.scale) cmd += " --scale " + p.scale;
+  return cmd;
+}
+
+function updateMetalHUDControls() {
+  const p = getSelectedHudParams();
+  document.getElementById("macCmdPreview").textContent = getMacLaunchCommand();
+  const qp = new URLSearchParams();
+  if (p.elements) qp.set("elements", p.elements);
+  if (p.align) qp.set("align", p.align);
+  if (p.scale) qp.set("scale", p.scale);
+  const qs = qp.toString();
+  document.getElementById("dlWinBtn").href = "/download/metal-hud-windows.bat" + (qs ? "?" + qs : "");
+}
+
+function syncHudPresetButtons() {
+  const checked = Array.from(document.querySelectorAll("input[data-hud-el]:checked"))
+    .map(cb => cb.dataset.hudEl)
+    .sort()
+    .join(",");
+  document.querySelectorAll("button[data-hud-preset]").forEach(btn => {
+    const presetList = (HUD_PRESET_MAP[btn.dataset.hudPreset] || []).slice().sort().join(",");
+    btn.classList.toggle("active", checked === presetList);
+  });
 }
 
 function applyStaticTranslations() {
@@ -436,8 +554,11 @@ function applyStaticTranslations() {
   document.getElementById("csvLink").textContent = s.downloadCSV;
   document.getElementById("metalHudTitle").textContent = s.metalHudTitle;
   document.getElementById("metalHudDesc").textContent = s.metalHudDesc;
+  document.getElementById("presetFpsGpuBtn").textContent = s.presetFpsGpu;
+  document.getElementById("presetMinimalBtn").textContent = s.presetMinimal;
+  document.getElementById("presetFullBtn").textContent = s.presetFull;
   document.getElementById("copyMacCmdBtn").textContent = s.copyMacCmd;
-  document.getElementById("macCmdPreview").textContent = getMacLaunchCommand();
+  updateMetalHUDControls();
   document.getElementById("dlWinBtn").textContent = s.dlWinBtn;
   document.getElementById("dlPyBtn").textContent = s.dlPyBtn;
   document.getElementById("metalHudHint").textContent = s.metalHudHint;
@@ -683,6 +804,27 @@ document.getElementById("copyMacCmdBtn").addEventListener("click", async () => {
   btn.textContent = t().copiedMacCmd;
   setTimeout(() => { btn.textContent = t().copyMacCmd; }, 2500);
 });
+
+document.querySelectorAll("button[data-hud-preset]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const allowed = new Set(HUD_PRESET_MAP[btn.dataset.hudPreset] || []);
+    document.querySelectorAll("input[data-hud-el]").forEach(cb => {
+      cb.checked = allowed.has(cb.dataset.hudEl);
+    });
+    syncHudPresetButtons();
+    updateMetalHUDControls();
+  });
+});
+
+document.querySelectorAll("input[data-hud-el]").forEach(cb => {
+  cb.addEventListener("change", () => {
+    syncHudPresetButtons();
+    updateMetalHUDControls();
+  });
+});
+
+document.getElementById("hudAlignSelect").addEventListener("change", updateMetalHUDControls);
+document.getElementById("hudScaleSelect").addEventListener("change", updateMetalHUDControls);
 
 applyStaticTranslations();
 pollSnapshot();

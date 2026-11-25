@@ -233,7 +233,15 @@ actor TelemetryWebServer {
             let fallbackHost = self.latestSnapshot.network.route.localIPv4
                 .map { "\($0):\(self.activePort)" } ?? "127.0.0.1:\(self.activePort)"
             let effectiveHost = hostHeader ?? fallbackHost
-            let script = MetalHUDLauncherPayloads.windowsBatchScript(serverHost: effectiveHost)
+            let elementsParam = components?.queryItems?.first(where: { $0.name == "elements" })?.value
+            let alignParam = components?.queryItems?.first(where: { $0.name == "align" })?.value
+            let scaleParam = components?.queryItems?.first(where: { $0.name == "scale" })?.value
+            let script = MetalHUDLauncherPayloads.windowsBatchScript(
+                serverHost: effectiveHost,
+                elements: elementsParam,
+                align: alignParam,
+                scale: scaleParam
+            )
             return Self.httpResponse(
                 status: "200 OK",
                 contentType: "application/octet-stream",

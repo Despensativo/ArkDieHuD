@@ -19,6 +19,25 @@ PRIORITY_APPS = [
     ("com.blackmagic-design.DaVinciResolveiPad", "DaVinci Resolve"),
 ]
 
+HUD_PRESETS = {
+    "fps-gpu": "fps,gputime,fpsgraph,frameintervalgraph",
+    "minimal": "fps,gputime",
+    "fps-only": "fps,fpsgraph",
+    "full": "",
+}
+
+VALID_ALIGNMENTS = {
+    "topleft",
+    "topcenter",
+    "topright",
+    "centerleft",
+    "centered",
+    "centerright",
+    "bottomleft",
+    "bottomcenter",
+    "bottomright",
+}
+
 # Custom 1-word CLI shortcuts -> ("Display Name", "com.bundle.identifier").
 # Users or AI assistants can add any app discovered via `./launch_metal_hud.sh --list`.
 CUSTOM_SHORTCUTS: dict[str, tuple[str, str]] = {
@@ -138,8 +157,46 @@ def get_installed_apps(device_id: str) -> list[dict]:
     return sorted(user_apps, key=lambda x: x.get("name", "").lower())
 
 
-def launch_app(device_id: str, name: str, bundle_id: str) -> None:
-    print(f"\n🚀 Iniciando {name} ({bundle_id}) com o Apple Metal HUD...")
+def build_hud_env(
+    preset: str | None,
+    elements: str | None,
+    align: str | None,
+    scale: str | None,
+) -> dict[str, str]:
+    env: dict[str, str] = {"MTL_HUD_ENABLED": "1"}
+    raw_elements = elements
+    if raw_elements is None and preset:
+        raw_elements = HUD_PRESETS.get(preset.lower().strip())
+    if raw_elements:
+        cleaned = ",".join(
+            part for part in (p.strip().lower() for p in raw_elements.split(","))
+            if part.isalpha()
+        )
+        if cleaned:
+            env["MTL_HUD_ELEMENTS"] = cleaned
+
+    if align:
+        cand = align.strip().lower()
+        if cand in VALID_ALIGNMENTS:
+            env["MTL_HUD_ALIGNMENT"] = cand
+
+    if scale:
+        try:
+            val = float(scale.strip())
+            if 0.0 < val <= 1.0:
+                env["MTL_HUD_SCALE"] = f"{val:g}"
+        except ValueError:
+            pass
+    return env
+
+
+def format_hud_summary(hud_env: dict[str, str]) -> str:
+    parts = [f"{k}={v}" for k, v in hud_env.items() if k != "MTL_HUD_ENABLED"]
+    return " | ".join(parts) if parts else "padrão completo Apple"
+
+
+def launch_app(device_id: str, name: str, bundle_id: str, hud_env: dict[str, str]) -> None:
+    print(f"\n🚀 Iniciando {name} ({bundle_id}) com o Apple Metal HUD ({format_hud_summary(hud_env)})...")
     cmd = [
         "xcrun",
         "devicectl",
@@ -147,7 +204,7 @@ def launch_app(device_id: str, name: str, bundle_id: str) -> None:
         "process",
         "launch",
         "-e",
-        '{"MTL_HUD_ENABLED": "1"}',
+        json.dumps(hud_env),
         "--device",
         device_id,
         "--terminate-existing",
@@ -178,6 +235,10 @@ Opções:
   --device <UDID>        Força o lançamento em um UDID específico (ou defina METAL_HUD_DEVICE_ID)
   --list                 Lista todos os apps/jogos instalados no iPad com seus Bundle IDs exatos
   --bundle <BUNDLE_ID>   Inicia diretamente qualquer app pelo Bundle ID (ex: com.miHoYo.GenshinImpact)
+  --preset <NOME>        Preset: fps-gpu, minimal, fps-only, full
+  --elements <CSV>       Métricas MTL_HUD_ELEMENTS (ex: fps,gputime,fpsgraph,frameintervalgraph)
+  --align <POS>          Posição: topleft, topright, topcenter, bottomleft, bottomright, ...
+  --scale <0.0-1.0>      Tamanho do HUD (ex: 0.14, 0.18, 0.22)
 
 Atalhos rápidos e busca:
   flash | fit            PUBGM FLASH (com.tencent.igfit)
@@ -208,12 +269,16 @@ def print_devices() -> None:
         )
 
 
-def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | None, str | None]:
+def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
     show_help = False
     show_devices = False
     list_apps = False
     cli_device = None
     cli_bundle = None
+    cli_preset = None
+    cli_elements = None
+    cli_align = None
+    cli_scale = None
     positional = None
 
     i = 0
@@ -241,15 +306,35 @@ def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | Non
             i += 1
         elif arg.startswith("--device="):
             cli_device = arg.split("=", 1)[1].strip()
+        elif arg == "--preset" and i + 1 < len(argv):
+            cli_preset = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--preset="):
+            cli_preset = arg.split("=", 1)[1].strip()
+        elif arg == "--elements" and i + 1 < len(argv):
+            cli_elements = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--elements="):
+            cli_elements = arg.split("=", 1)[1].strip()
+        elif arg == "--align" and i + 1 < len(argv):
+            cli_align = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--align="):
+            cli_align = arg.split("=", 1)[1].strip()
+        elif arg == "--scale" and i + 1 < len(argv):
+            cli_scale = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--scale="):
+            cli_scale = arg.split("=", 1)[1].strip()
         else:
             positional = arg.lower().strip()
         i += 1
 
-    return show_help, show_devices, list_apps, cli_device, cli_bundle, positional
+    return show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, positional
 
 
 def main() -> None:
-    show_help, show_devices, list_apps, cli_device, cli_bundle, arg = parse_args(sys.argv[1:])
+    show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, arg = parse_args(sys.argv[1:])
 
     if show_help:
         print_help()
@@ -259,16 +344,17 @@ def main() -> None:
         print_devices()
         return
 
+    hud_env = build_hud_env(cli_preset, cli_elements, cli_align, cli_scale)
     device_id, device_label = resolve_device_id(cli_device)
     print(f"🎯 Alvo detectado: {device_label}")
 
     if cli_bundle:
-        launch_app(device_id, cli_bundle, cli_bundle)
+        launch_app(device_id, cli_bundle, cli_bundle, hud_env)
         return
 
     if not list_apps and arg and arg in CUSTOM_SHORTCUTS:
         name, bundle_id = CUSTOM_SHORTCUTS[arg]
-        launch_app(device_id, name, bundle_id)
+        launch_app(device_id, name, bundle_id, hud_env)
         return
 
     print("🔍 Carregando lista de jogos e aplicativos instalados...")

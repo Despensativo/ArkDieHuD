@@ -7,9 +7,26 @@ enum MetalHUDLauncherPayloads {
         self.crossPlatformPythonScript
     }
 
-    static func windowsBatchScript(serverHost: String?) -> String {
+    static func windowsBatchScript(
+        serverHost: String?,
+        elements: String? = nil,
+        align: String? = nil,
+        scale: String? = nil
+    ) -> String {
         let sanitizedHost = self.sanitizeHost(serverHost)
         let pyURL = "http://\(sanitizedHost)/download/arkdiehud_metal_hud.py"
+        var extraArgs: [String] = []
+        if let cleanElements = self.sanitizeElements(elements) {
+            extraArgs.append("--elements \(cleanElements)")
+        }
+        if let cleanAlign = self.sanitizeAlign(align) {
+            extraArgs.append("--align \(cleanAlign)")
+        }
+        if let cleanScale = self.sanitizeScale(scale) {
+            extraArgs.append("--scale \(cleanScale)")
+        }
+        let argsSuffix = extraArgs.isEmpty ? "" : " " + extraArgs.joined(separator: " ")
+
         let lines = [
             "@echo off",
             "chcp 65001 >nul",
@@ -51,8 +68,8 @@ enum MetalHUDLauncherPayloads {
             "    %PY_CMD% -m pip install --upgrade pymobiledevice3",
             ")",
             "",
-            "%PY_CMD% \"%~dp0arkdiehud_metal_hud.py\" --pause",
-            "pause"
+            "%PY_CMD% \"%~dp0arkdiehud_metal_hud.py\" --pause\(argsSuffix)",
+            "pause",
         ]
         return lines.joined(separator: "\r\n") + "\r\n"
     }
@@ -62,6 +79,32 @@ enum MetalHUDLauncherPayloads {
         let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-:[]")
         let filtered = String(rawHost.unicodeScalars.filter { allowed.contains($0) })
         return filtered.isEmpty ? "127.0.0.1:8787" : filtered
+    }
+
+    private static func sanitizeElements(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz,")
+        let filtered = String(raw.lowercased().unicodeScalars.filter { allowed.contains($0) })
+            .split(separator: ",")
+            .map(String.init)
+            .filter { !$0.isEmpty }
+            .joined(separator: ",")
+        return filtered.isEmpty ? nil : filtered
+    }
+
+    private static func sanitizeAlign(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz")
+        let filtered = String(raw.lowercased().unicodeScalars.filter { allowed.contains($0) })
+        return filtered.isEmpty ? nil : filtered
+    }
+
+    private static func sanitizeScale(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let allowed = CharacterSet(charactersIn: "0123456789.")
+        let filtered = String(raw.unicodeScalars.filter { allowed.contains($0) })
+        guard let num = Double(filtered), num > 0.0, num <= 1.0 else { return nil }
+        return filtered
     }
 
     static let crossPlatformPythonScript: String = ##"""
@@ -92,6 +135,25 @@ PRIORITY_APPS = [
     ("com.blackmagic-design.DaVinciResolveiPad", "DaVinci Resolve"),
 ]
 
+HUD_PRESETS: Dict[str, str] = {
+    "fps-gpu": "fps,gputime,fpsgraph,frameintervalgraph",
+    "minimal": "fps,gputime",
+    "fps-only": "fps,fpsgraph",
+    "full": "",
+}
+
+VALID_ALIGNMENTS = {
+    "topleft",
+    "topcenter",
+    "topright",
+    "centerleft",
+    "centered",
+    "centerright",
+    "bottomleft",
+    "bottomcenter",
+    "bottomright",
+}
+
 CUSTOM_SHORTCUTS: Dict[str, Tuple[str, str]] = {
     "pubg": ("PUBG MOBILE", "com.tencent.ig"),
     "pubgm": ("PUBG MOBILE", "com.tencent.ig"),
@@ -103,6 +165,44 @@ CUSTOM_SHORTCUTS: Dict[str, Tuple[str, str]] = {
     "davinci": ("DaVinci Resolve", "com.blackmagic-design.DaVinciResolveiPad"),
     "resolve": ("DaVinci Resolve", "com.blackmagic-design.DaVinciResolveiPad"),
 }
+
+
+def build_hud_env(
+    preset: Optional[str],
+    elements: Optional[str],
+    align: Optional[str],
+    scale: Optional[str],
+) -> Dict[str, str]:
+    env: Dict[str, str] = {"MTL_HUD_ENABLED": "1"}
+    raw_elements: Optional[str] = elements
+    if raw_elements is None and preset:
+        raw_elements = HUD_PRESETS.get(preset.lower().strip())
+    if raw_elements:
+        cleaned = ",".join(
+            part for part in (p.strip().lower() for p in raw_elements.split(","))
+            if part.isalpha()
+        )
+        if cleaned:
+            env["MTL_HUD_ELEMENTS"] = cleaned
+
+    if align:
+        cand = align.strip().lower()
+        if cand in VALID_ALIGNMENTS:
+            env["MTL_HUD_ALIGNMENT"] = cand
+
+    if scale:
+        try:
+            val = float(scale.strip())
+            if 0.0 < val <= 1.0:
+                env["MTL_HUD_SCALE"] = f"{val:g}"
+        except ValueError:
+            pass
+    return env
+
+
+def format_hud_summary(hud_env: Dict[str, str]) -> str:
+    parts = [f"{k}={v}" for k, v in hud_env.items() if k != "MTL_HUD_ENABLED"]
+    return " | ".join(parts) if parts else "padrao completo Apple"
 
 
 def setup_pause_if_needed(force_pause: bool) -> None:
@@ -219,8 +319,8 @@ def devicectl_get_apps(device_id: str) -> List[dict]:
     return sorted(user_apps, key=lambda x: x.get("name", "").lower())
 
 
-def devicectl_launch(device_id: str, name: str, bundle_id: str) -> None:
-    print(f"\n[>>] Iniciando {name} ({bundle_id}) com Apple Metal HUD...")
+def devicectl_launch(device_id: str, name: str, bundle_id: str, hud_env: Dict[str, str]) -> None:
+    print(f"\n[>>] Iniciando {name} ({bundle_id}) com Apple Metal HUD ({format_hud_summary(hud_env)})...")
     cmd = [
         "xcrun",
         "devicectl",
@@ -228,7 +328,7 @@ def devicectl_launch(device_id: str, name: str, bundle_id: str) -> None:
         "process",
         "launch",
         "-e",
-        '{"MTL_HUD_ENABLED": "1"}',
+        json.dumps(hud_env),
         "--device",
         device_id,
         "--terminate-existing",
@@ -308,8 +408,20 @@ def pmd_get_apps(cli_device: Optional[str]) -> List[dict]:
     return sorted(apps, key=lambda x: x.get("name", "").lower())
 
 
-def pmd_launch_with_tunnel(name: str, bundle_id: str, cli_device: Optional[str]) -> None:
-    print(f"\n[>>] Iniciando {name} ({bundle_id}) via pymobiledevice3 (MTL_HUD_ENABLED=1)...")
+def pmd_env_args(hud_env: Dict[str, str]) -> List[str]:
+    args: List[str] = []
+    for key, val in hud_env.items():
+        args.extend(["--env", key, val])
+    return args
+
+
+def pmd_launch_with_tunnel(
+    name: str,
+    bundle_id: str,
+    cli_device: Optional[str],
+    hud_env: Dict[str, str],
+) -> None:
+    print(f"\n[>>] Iniciando {name} ({bundle_id}) via pymobiledevice3 ({format_hud_summary(hud_env)})...")
 
     if pmd_tunneld_reachable():
         mount_cmd = [sys.executable, "-m", "pymobiledevice3", "mounter", "auto-mount", "--tunnel", ""]
@@ -323,9 +435,7 @@ def pmd_launch_with_tunnel(name: str, bundle_id: str, cli_device: Optional[str])
             bundle_id,
             "--tunnel",
             cli_device or "",
-            "--env",
-            "MTL_HUD_ENABLED",
-            "1",
+            *pmd_env_args(hud_env),
             "--kill-existing",
         ]
         subprocess.run(mount_cmd, capture_output=True, text=True)
@@ -411,9 +521,7 @@ def pmd_launch_with_tunnel(name: str, bundle_id: str, cli_device: Optional[str])
             "--rsd",
             rsd_host,
             rsd_port,
-            "--env",
-            "MTL_HUD_ENABLED",
-            "1",
+            *pmd_env_args(hud_env),
             "--kill-existing",
         ]
         res = subprocess.run(launch_cmd, capture_output=True, text=True)
@@ -511,6 +619,10 @@ Opções:
   --device <UDID>        Força um UDID específico (ou defina METAL_HUD_DEVICE_ID)
   --list                 Lista todos os apps/jogos com Bundle IDs
   --bundle <BUNDLE_ID>   Inicia diretamente pelo Bundle ID
+  --preset <NOME>        Preset: fps-gpu, minimal, fps-only, full
+  --elements <CSV>       Métricas MTL_HUD_ELEMENTS (ex: fps,gputime,fpsgraph,frameintervalgraph)
+  --align <POS>          Posição: topleft, topright, topcenter, bottomleft, bottomright, ...
+  --scale <0.0-1.0>      Tamanho do HUD (ex: 0.14, 0.18, 0.22)
   --pause                Aguarda ENTER antes de fechar"""
     )
 
@@ -522,6 +634,10 @@ def main() -> None:
     force_pause = False
     cli_device: Optional[str] = None
     cli_bundle: Optional[str] = None
+    cli_preset: Optional[str] = None
+    cli_elements: Optional[str] = None
+    cli_align: Optional[str] = None
+    cli_scale: Optional[str] = None
     positional: Optional[str] = None
 
     argv = sys.argv[1:]
@@ -546,6 +662,26 @@ def main() -> None:
             i += 1
         elif arg.startswith("--device="):
             cli_device = arg.split("=", 1)[1].strip()
+        elif arg == "--preset" and i + 1 < len(argv):
+            cli_preset = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--preset="):
+            cli_preset = arg.split("=", 1)[1].strip()
+        elif arg == "--elements" and i + 1 < len(argv):
+            cli_elements = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--elements="):
+            cli_elements = arg.split("=", 1)[1].strip()
+        elif arg == "--align" and i + 1 < len(argv):
+            cli_align = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--align="):
+            cli_align = arg.split("=", 1)[1].strip()
+        elif arg == "--scale" and i + 1 < len(argv):
+            cli_scale = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--scale="):
+            cli_scale = arg.split("=", 1)[1].strip()
         else:
             positional = arg.lower().strip()
         i += 1
@@ -556,6 +692,7 @@ def main() -> None:
         print_help()
         return
 
+    hud_env = build_hud_env(cli_preset, cli_elements, cli_align, cli_scale)
     env_device = os.environ.get("METAL_HUD_DEVICE_ID", "").strip()
     target_device = cli_device or env_device or None
 
@@ -588,11 +725,11 @@ def main() -> None:
         print(f"[ALVO] Alvo detectado: {label}")
 
         if cli_bundle:
-            devicectl_launch(target_device, cli_bundle, cli_bundle)
+            devicectl_launch(target_device, cli_bundle, cli_bundle, hud_env)
             return
         if not list_apps and positional and positional in CUSTOM_SHORTCUTS:
             name, bundle_id = CUSTOM_SHORTCUTS[positional]
-            devicectl_launch(target_device, name, bundle_id)
+            devicectl_launch(target_device, name, bundle_id, hud_env)
             return
 
         print("[...] Carregando lista de jogos e aplicativos instalados...")
@@ -609,7 +746,7 @@ def main() -> None:
         pick_and_launch(
             apps,
             positional,
-            lambda n, b: devicectl_launch(target_device, n, b),
+            lambda n, b: devicectl_launch(target_device, n, b, hud_env),
         )
         return
 
@@ -619,11 +756,11 @@ def main() -> None:
         sys.exit(1)
 
     if cli_bundle:
-        pmd_launch_with_tunnel(cli_bundle, cli_bundle, target_device)
+        pmd_launch_with_tunnel(cli_bundle, cli_bundle, target_device, hud_env)
         return
     if not list_apps and positional and positional in CUSTOM_SHORTCUTS:
         name, bundle_id = CUSTOM_SHORTCUTS[positional]
-        pmd_launch_with_tunnel(name, bundle_id, target_device)
+        pmd_launch_with_tunnel(name, bundle_id, target_device, hud_env)
         return
 
     print("[...] Listando jogos e aplicativos instalados no dispositivo...")
@@ -639,7 +776,7 @@ def main() -> None:
     pick_and_launch(
         apps,
         positional,
-        lambda n, b: pmd_launch_with_tunnel(n, b, target_device),
+        lambda n, b: pmd_launch_with_tunnel(n, b, target_device, hud_env),
     )
 
 
