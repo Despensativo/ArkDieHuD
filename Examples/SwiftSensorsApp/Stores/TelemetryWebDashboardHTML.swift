@@ -442,7 +442,7 @@ function renderKPIs(d) {
 
   const cards = [
     ["CPU Die", cpuT != null ? fmt(cpuT, 1) + "°C" : "--", d.cpuSensorName || s.cpuSilicon, tempColor(cpuT)],
-    ["GPU Die", d.gpuTemperature != null ? fmt(d.gpuTemperature, 1) + "°C" : "--", d.gpuSensorName || s.gpuSilicon, tempColor(d.gpuTemperature)],
+    ...(d.gpuTemperature != null ? [["GPU Die", fmt(d.gpuTemperature, 1) + "°C", d.gpuSensorName || s.gpuSilicon, tempColor(d.gpuTemperature)]] : []),
     [s.cpuLoad, fmt0(d.cpuTotalPercent) + "%", d.topology ? d.topology.totalCores + " " + s.cores : "CPU", d.cpuTotalPercent >= 85 ? "var(--red)" : "var(--accent)"],
     [s.power, d.estimatedWatts != null ? fmt(d.estimatedWatts, 1) + " W" : "--", s.statePrefix + thm, "var(--orange)"],
     [s.ram, fmt(memGB, 1) + " GB", fmt0(memPct) + "% " + s.used, memPct >= 85 ? "var(--red)" : "var(--accent)"],

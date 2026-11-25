@@ -286,11 +286,10 @@ enum HUDMetricBuilder {
             ))
         }
 
-        if config.showGPUTemp {
-            let gpuT = snapshot.gpuTemperature
+        if config.showGPUTemp, let gpuT = snapshot.gpuTemperature {
             cards.append(HUDCardMetric(
                 label: L10n.tr("GPU TEMP"),
-                value: gpuT.map { String(format: "%.1f°C", $0) } ?? "--°C",
+                value: String(format: "%.1f°C", gpuT),
                 subtitle: snapshot.gpuSensorName ?? L10n.tr("GPU Silicon"),
                 accent: self.temperatureColor(gpuT),
                 progress: self.normalizedTempProgress(gpuT)

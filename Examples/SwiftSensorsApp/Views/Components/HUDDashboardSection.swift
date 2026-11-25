@@ -40,15 +40,7 @@ struct HUDDashboardSection: View {
                         .strokeBorder(TelemetryTheme.subtleBorder, lineWidth: 1)
                 )
 
-            LabeledContent(L10n.tr("HUD Layout")) {
-                Picker(L10n.tr("HUD Mode"), selection: self.$hudController.layoutMode) {
-                    ForEach(HUDLayoutMode.allCases) { mode in
-                        Text(mode.localizedTitle).tag(mode)
-                    }
-                }
-                .pickerStyle(.menu)
-            }
-            .font(.subheadline)
+            self.layoutModeRow
 
             Button {
                 self.showCustomizationSheet = true
@@ -111,6 +103,48 @@ struct HUDDashboardSection: View {
         .sheet(isPresented: self.$showCustomizationSheet) {
             TelemetryCustomizationSheetView(hudController: self.hudController)
         }
+    }
+
+    private var layoutModeRow: some View {
+        HStack(spacing: 10) {
+            Text(L10n.tr("HUD Layout"))
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .layoutPriority(1)
+
+            Spacer(minLength: 8)
+
+            Menu {
+                ForEach(HUDLayoutMode.allCases) { mode in
+                    Button {
+                        self.hudController.layoutMode = mode
+                    } label: {
+                        if self.hudController.layoutMode == mode {
+                            Label(mode.localizedTitle, systemImage: "checkmark")
+                        } else {
+                            Text(mode.localizedTitle)
+                        }
+                    }
+                }
+            } label: {
+                self.layoutMenuLabel
+            }
+            .accessibilityLabel(L10n.tr("HUD Mode"))
+            .accessibilityValue(self.hudController.layoutMode.localizedTitle)
+        }
+    }
+
+    private var layoutMenuLabel: some View {
+        HStack(spacing: 5) {
+            Text(self.hudController.layoutMode.localizedTitle)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .truncationMode(.tail)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption2.bold())
+        }
+        .font(.subheadline.weight(.medium))
+        .foregroundStyle(Color.accentColor)
     }
 
     private var remoteMonitorCard: some View {

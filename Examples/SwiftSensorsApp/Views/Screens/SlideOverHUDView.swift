@@ -21,7 +21,9 @@ struct SlideOverHUDView: View {
     }
 
     private var showThermalsSection: Bool {
-        self.config.showSlideOverThermals && (self.config.showCPUTemp || self.config.showGPUTemp)
+        self.config.showSlideOverThermals && (
+            self.config.showCPUTemp || (self.config.showGPUTemp && self.snapshot.gpuTemperature != nil)
+        )
     }
 
     private var showNetworkCardSection: Bool {
@@ -93,11 +95,11 @@ struct SlideOverHUDView: View {
                                 )
                             }
 
-                            if self.config.showGPUTemp {
+                            if self.config.showGPUTemp, let gpuTemp = self.snapshot.gpuTemperature {
                                 self.thermalTile(
                                     title: "GPU Die",
                                     systemImage: "square.grid.2x2",
-                                    temp: self.snapshot.gpuTemperature,
+                                    temp: gpuTemp,
                                     sensorName: self.snapshot.gpuSensorName ?? L10n.tr("Graphics Core")
                                 )
                             }

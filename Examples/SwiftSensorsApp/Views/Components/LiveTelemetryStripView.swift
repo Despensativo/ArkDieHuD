@@ -35,13 +35,13 @@ struct LiveTelemetryStripView: View {
             ))
         }
 
-        if self.config.showGPUTemp {
+        if self.config.showGPUTemp, let gpuTemp = self.snapshot.gpuTemperature {
             items.append(StripTileItem(
                 id: "gpu_temp",
                 title: "GPU Die",
                 systemImage: "square.grid.2x2",
-                value: self.snapshot.gpuTemperature.map { String(format: "%.1f°C", $0) } ?? "--°C",
-                valueColor: TelemetryTheme.temperatureColor(self.snapshot.gpuTemperature),
+                value: String(format: "%.1f°C", gpuTemp),
+                valueColor: TelemetryTheme.temperatureColor(gpuTemp),
                 subtitle: self.snapshot.gpuSensorName ?? L10n.tr("Graphics Core"),
                 destination: nil
             ))
