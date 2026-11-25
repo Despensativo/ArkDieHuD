@@ -18,24 +18,28 @@ Bem-vindo ao **ArkDieHuD**. Este guia explica do zero como instalar o aplicativo
 2. Ative a chave, reinicie o iPad quando solicitado e confirme após ligar.
    *(Se a opção não aparecer ainda, conecte o iPad uma vez ao Mac/PC com Xcode ou Sideloadly aberto — o iPadOS libera o menu automaticamente.)*
 
-### Opção A: Instalar o `.ipa` pronto via Sideloadly / AltStore / SideStore (Sem precisar de Mac/Xcode)
-1. Baixe o arquivo `ArkDieHuD-unsigned.ipa` na aba **[Releases](https://github.com/Despensativo/ArkDieHuD/releases)**.
-2. Abra o **Sideloadly** (Windows/Mac) ou **AltStore / SideStore**.
-3. Conecte o iPad, informe seu **Apple ID gratuito** e arraste o `ArkDieHuD-unsigned.ipa`.
-4. No iPad, vá em **Ajustes → Geral → Gestão de VPN e Dispositivo**, toque no seu Apple ID e em **Confiar**.
+### Opção A: Catálogo Oficial no SideStore / AltStore (Recomendado — Atualiza e Renova Sozinho)
+1. No **SideStore** ou **AltStore** do iPad, vá em **Sources → +** e adicione:
+   ```text
+   https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/altstore-source.json
+   ```
+2. Toque em **ArkDieHuD → GET** (usa qualquer **Apple ID gratuito**, com renovação automática dos 7 dias).
 
-### Opção B: Compilar do zero no Xcode (Personal Team gratuito)
-1. Clone o repositório e, se quiser assinar com sua equipe local, crie `Examples/Config/LocalSigning.xcconfig` (já ignorado pelo Git):
-   ```xcconfig
-   DEVELOPMENT_TEAM = SEU_TEAM_ID
-   PRODUCT_BUNDLE_IDENTIFIER = com.seunome.ArkDieHuD
-   ```
-   Ou gere o `.ipa` direto pelo Terminal:
-   ```bash
-   ./Scripts/export-ipa.sh
-   # Saída: dist/ArkDieHuD-unsigned.ipa
-   ```
-2. Abra `Examples/SwiftSensorsApp.xcodeproj`, selecione seu iPad e aperte **Cmd + R**.
+### Opção B: Instalar `.ipa` via Sideloadly (Windows ou Mac — Sem Precisar de Xcode!)
+1. Baixe [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) na aba **[Releases](https://github.com/Despensativo/ArkDieHuD/releases)**.
+2. Abra o **[Sideloadly](https://sideloadly.io/)** (~80 MB, funciona no Windows e no Mac), conecte o iPad, informe seu **Apple ID gratuito** e arraste o `ArkDieHuD-unsigned.ipa`.
+3. No iPad, vá em **Ajustes → Geral → Gestão de VPN e Dispositivo**, toque no seu Apple ID e em **Confiar**.
+
+### Opção C: Instalador Automático no Mac (`./install.sh`)
+Se você usa Mac e tem Xcode instalado:
+```bash
+git clone https://github.com/Despensativo/ArkDieHuD.git
+cd ArkDieHuD
+./install.sh
+```
+O assistente verifica tudo sozinho: detecta o iPad conectado, encontra sua conta Apple gratuita ou paga no Xcode, gera seu `Examples/Config/LocalSigning.xcconfig` local (ignorado pelo Git), compila, instala e abre o app no iPad.
+
+> *(Dica: você **não precisa** baixar o Xcode inteiro de ~10 GB só para usar o ArkDieHuD — use a **Opção A** ou **Opção B** com o `.ipa` pronto. Como a Apple exige assinatura vinculada ao aparelho do usuário para APIs `IOHID` em Modo Desenvolvedor, não é possível distribuir um `.ipa` pré-assinado universal.)*
 
 ---
 

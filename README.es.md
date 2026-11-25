@@ -58,14 +58,33 @@
 
 ---
 
-## Inicio Rápido
+## Cómo Instalar — Elige el Mejor Método Para Ti
 
+| Método | ¿Para quién es? | ¿Requiere Mac / Xcode? | Cómo funciona |
+| :--- | :--- | :--- | :--- |
+| **1. Sideloadly + `.ipa`** | **Principiantes / Windows o Mac** | **No** | Descarga [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) y arrástralo en [Sideloadly](https://sideloadly.io/) con cualquier **Apple ID gratuito**. |
+| **2. SideStore / AltStore** | **Actualizaciones y renovación automáticas** | **No** *(tras configurar)* | Añade la fuente oficial en SideStore/AltStore y pulsa **GET**. |
+| **3. Asistente en Mac** | **Usuarios de Mac con Xcode** | **Sí** | Ejecuta `./install.sh` — detecta iPad y Apple ID automáticamente, compila e instala. |
+
+### Opción 1 — Más Fácil (Windows o Mac, Sin Xcode)
+1. Descarga [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa).
+2. Abre **Sideloadly**, conecta tu iPad, introduce tu **Apple ID gratuito** e instala el `.ipa`.
+3. En el iPad: activa **Ajustes → Privacidad y Seguridad → Modo de Desarrollador** y toca **Confiar** en **Ajustes → General → Gestión de VPN y Dispositivos**.
+
+### Opción 2 — Fuente Oficial SideStore / AltStore
+Pega esta URL en **SideStore** o **AltStore** (*Sources → +*):
+```text
+https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/altstore-source.json
+```
+
+### Opción 3 — Asistente Guiado en Mac (`./install.sh`) y Extras
 ```bash
-# 1) Clonar el repositorio
+# 1) Clonar y ejecutar el instalador guiado (detecta iPad y cuenta Apple gratuita o de pago)
 git clone https://github.com/Despensativo/ArkDieHuD.git
 cd ArkDieHuD
+./install.sh
 
-# 2) Generar .ipa para cuenta gratuita de Apple (Sideloadly / AltStore / SideStore)
+# 2) Opcional: Generar el .ipa sin firma localmente
 ./Scripts/export-ipa.sh
 
 # 3) Opcional: Abrir CUALQUIER juego o app en tu iPad con Apple Metal FPS HUD
@@ -78,6 +97,10 @@ cd ArkDieHuD
 # 4) Opcional: Túnel USB para abrir el panel PC en http://127.0.0.1:8787
 iproxy 8787 8787
 ```
+
+> **Apple ID Gratuito vs Cuenta de Pago y Por Qué No Viene Prefirmado:**
+> - Una **cuenta gratuita de Apple** funciona al 100% (dura **7 días**; en SideStore/AltStore se renueva sola, o vuelve a ejecutar `./install.sh` / Sideloadly). Una cuenta de pago dura **1 año**.
+> - Los sensores reales de silicio y potencia usan APIs privadas (`IOHID`), no permitidas en la App Store y que requieren firma personal.
 
 ---
 

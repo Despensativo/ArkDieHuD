@@ -58,14 +58,33 @@
 
 ---
 
-## Início Rápido
+## Como Instalar — Escolha a Melhor Forma Para Você
 
+| Método | Para quem é? | Precisa de Mac / Xcode? | Como funciona |
+| :--- | :--- | :--- | :--- |
+| **1. Sideloadly + `.ipa`** | **Iniciantes / Windows ou Mac** (zero terminal) | **Não** | Baixe [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) e arraste no [Sideloadly](https://sideloadly.io/) com seu **Apple ID gratuito**. |
+| **2. SideStore / AltStore** | **Atualizações e renovação automáticas** no iPad | **Não** *(após configurar)* | Adicione o catálogo oficial abaixo dentro do SideStore/AltStore e toque em **GET**. |
+| **3. Assistente no Mac** | **Quem usa Mac com Xcode** | **Sim** | Rode `./install.sh` — detecta iPad e Apple ID sozinho, compila, instala e abre o app. |
+
+### Opção 1 — Mais Fácil (Windows ou Mac, Sem Xcode)
+1. Baixe o arquivo pronto [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa).
+2. Abra o **Sideloadly**, conecte o iPad, informe qualquer **Apple ID gratuito** e arraste o `.ipa` para instalar.
+3. No iPad: ative **Ajustes → Privacidade e Segurança → Modo Desenvolvedor** e confie no perfil em **Ajustes → Geral → Gestão de VPN e Dispositivo**.
+
+### Opção 2 — Catálogo Oficial SideStore / AltStore (1 Toque)
+Cole esta URL dentro de **SideStore** ou **AltStore** (*Sources → +*):
+```text
+https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/altstore-source.json
+```
+
+### Opção 3 — Assistente Guiado no Mac (`./install.sh`) e Extras
 ```bash
-# 1) Clonar o repositório
+# 1) Clonar e rodar o instalador automático (detecta iPad, certificado/Apple ID e instala)
 git clone https://github.com/Despensativo/ArkDieHuD.git
 cd ArkDieHuD
+./install.sh
 
-# 2) Gerar .ipa para conta Apple gratuita (Sideloadly / AltStore / SideStore)
+# 2) Opcional: Gerar o .ipa sem assinatura localmente
 ./Scripts/export-ipa.sh
 
 # 3) Opcional: Abrir QUALQUER jogo ou app no iPad com Apple Metal FPS HUD
@@ -79,16 +98,9 @@ cd ArkDieHuD
 iproxy 8787 8787
 ```
 
-### Assinatura Local no Xcode (Opcional)
-
-Team IDs pessoais não ficam salvos no Git. Crie localmente o arquivo `Examples/Config/LocalSigning.xcconfig` (já ignorado no `.gitignore`):
-
-```xcconfig
-DEVELOPMENT_TEAM = SEU_TEAM_ID
-PRODUCT_BUNDLE_IDENTIFIER = com.seunome.ArkDieHuD
-```
-
-Depois abra `Examples/SwiftSensorsApp.xcodeproj` e clique em **Run**.
+> **Apple ID Gratuito vs Conta Paga e Por Que Não Vem Pré-Assinado:**
+> - **Conta Apple gratuita** funciona 100% (vale por **7 dias**; no SideStore/AltStore renova sozinho, ou basta rodar `./install.sh` / Sideloadly de novo). Conta paga dura **1 ano**.
+> - Leituras reais do die CPU/GPU e Watts usam APIs privadas (`IOHID`), que a Apple bloqueia na App Store e não permite pré-assinar para aparelhos de terceiros.
 
 ---
 

@@ -1,0 +1,70 @@
+{
+  "name": "ArkDieHuD Official",
+  "subtitle": "Apple Silicon Telemetry, PiP HUD & Network Monitor",
+  "description": "Real-time CPU/GPU die thermals (IOHID), estimated wattage, RAM/Jetsam, floating Picture-in-Picture HUD, Dual-Probe ICMP/UDP/TCP network monitor, 24h SQLite history, and local PC/Mac web dashboard (:8787) for iPadOS & iOS.",
+  "iconURL": "https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/Media/arkdiehud_icon.png",
+  "headerURL": "https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/Media/arkdiehud_github_banner.png",
+  "website": "https://github.com/Despensativo/ArkDieHuD",
+  "tintColor": "#22D3EE",
+  "featuredApps": [
+    "com.cristianark.SwiftSensorsApp"
+  ],
+  "apps": [
+    {
+      "name": "ArkDieHuD",
+      "bundleIdentifier": "com.cristianark.SwiftSensorsApp",
+      "developerName": "Despensativo",
+      "subtitle": "Silicon & Network Telemetry HUD",
+      "localizedDescription": "Monitor real Apple Silicon CPU & GPU die temperatures, wattage, RAM, and network packet loss (ICMP + UDP DNS 53 + TCP vs local router) in a customizable floating Picture-in-Picture HUD or on your PC/Mac browser (:8787).\n\nIncludes:\n• 4 PiP layouts + 12 independent metric toggles\n• Slide Over drawer for iPadOS\n• Dual-Probe router vs ISP drop diagnosis & cycle detector\n• 24h SQLite WAL history & unified CSV export\n• Stealth PiP mode for voice-chat games\n• Auto-detected English, Português (BR), and Español UI",
+      "iconURL": "https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/Media/arkdiehud_icon.png",
+      "tintColor": "#22D3EE",
+      "category": "utilities",
+      "screenshots": {
+        "ipad": [
+          {
+            "imageURL": "https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/Media/screenshots/dashboard_live.png",
+            "width": 2388,
+            "height": 1668
+          },
+          {
+            "imageURL": "https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/Media/screenshots/pip_and_metal_hud.png",
+            "width": 2388,
+            "height": 1668
+          },
+          {
+            "imageURL": "https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/Media/screenshots/logs_24h.png",
+            "width": 2388,
+            "height": 1668
+          },
+          {
+            "imageURL": "https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/Media/screenshots/pc_stealth_pip.png",
+            "width": 2388,
+            "height": 1668
+          }
+        ],
+        "iphone": [
+          "https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/Media/screenshots/dashboard_live.png",
+          "https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/Media/screenshots/logs_24h.png"
+        ]
+      },
+      "versions": [
+        {
+          "version": "1.0",
+          "buildVersion": "1",
+          "date": "2026-11-25",
+          "localizedDescription": "Initial v1.0.0 release: trilingual auto-detection (EN/PT-BR/ES), persistent IOHID optimization (~3% single-core CPU, ~37 MiB RAM), Dual-Probe ICMP/UDP/TCP, 24h SQLite WAL logs, and PC/Mac web dashboard (:8787).",
+          "downloadURL": "https://github.com/Despensativo/ArkDieHuD/releases/download/v1.0.0/ArkDieHuD-unsigned.ipa",
+          "size": 3626753,
+          "minOSVersion": "17.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSLocalNetworkUsageDescription": "Used to probe your local router and serve the live ArkDieHuD web dashboard to your PC or Mac browser."
+        }
+      }
+    }
+  ],
+  "news": []
+}

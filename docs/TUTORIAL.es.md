@@ -17,23 +17,28 @@ Bienvenido a **ArkDieHuD**. Esta guía explica cómo instalar la app (incluso co
 1. Ve a **Ajustes → Privacidad y Seguridad → Modo de Desarrollador**.
 2. Actívalo, reinicia el iPad cuando se solicite y confirma al encender.
 
-### Opción A: Instalar `.ipa` listo con Sideloadly / AltStore / SideStore
-1. Descarga `ArkDieHuD-unsigned.ipa` desde **[Releases](https://github.com/Despensativo/ArkDieHuD/releases)**.
-2. Abre **Sideloadly** (Windows/Mac) o **AltStore / SideStore**.
-3. Conecta tu iPad, introduce tu **Apple ID gratuito** e instala `ArkDieHuD-unsigned.ipa`.
-4. En el iPad, ve a **Ajustes → General → Gestión de VPN y Dispositivos** y toca **Confiar**.
+### Opción A: Fuente Oficial SideStore / AltStore (Actualizaciones y Renovación Automática)
+1. En **SideStore** o **AltStore**, ve a **Sources → +** y añade:
+   ```text
+   https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/altstore-source.json
+   ```
+2. Toca **ArkDieHuD → GET** (funciona con cualquier **Apple ID gratuito**).
 
-### Opción B: Compilar desde Xcode (Personal Team gratuito)
-1. Clona el repositorio y crea localmente `Examples/Config/LocalSigning.xcconfig` (ignorado por Git):
-   ```xcconfig
-   DEVELOPMENT_TEAM = TU_TEAM_ID
-   PRODUCT_BUNDLE_IDENTIFIER = com.tunombre.ArkDieHuD
-   ```
-   O genera el `.ipa` sin firma desde la Terminal:
-   ```bash
-   ./Scripts/export-ipa.sh
-   ```
-2. Abre `Examples/SwiftSensorsApp.xcodeproj`, elige tu iPad y pulsa **Cmd + R**.
+### Opción B: Instalar `.ipa` con Sideloadly (Windows o Mac — Sin Xcode)
+1. Descarga [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) desde **[Releases](https://github.com/Despensativo/ArkDieHuD/releases)**.
+2. Abre **[Sideloadly](https://sideloadly.io/)** (Windows/Mac), conecta tu iPad, introduce tu **Apple ID gratuito** e instala `ArkDieHuD-unsigned.ipa`.
+3. En el iPad, ve a **Ajustes → General → Gestión de VPN y Dispositivos** y toca **Confiar**.
+
+### Opción C: Asistente Automático en Mac (`./install.sh`)
+Si usas Mac con Xcode:
+```bash
+git clone https://github.com/Despensativo/ArkDieHuD.git
+cd ArkDieHuD
+./install.sh
+```
+Detecta tu iPad, tu cuenta Apple gratuita o de pago, compila, instala y abre la app automáticamente.
+
+> *(Nota: NO necesitas instalar Xcode completo solo para usar la app; usa las Opciones A o B. La firma personal es obligatoria por Apple para ejecutar sensores privados `IOHID` en Modo Desarrollador.)*
 
 ---
 
