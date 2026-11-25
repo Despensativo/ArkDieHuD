@@ -239,6 +239,7 @@ enum TelemetryWebDashboardHTML {
     <span id="fpsChartTitle">Game FPS History (Avg / Min)</span>
     <span id="fpsChartLegend" class="legend">Green: Avg FPS • Orange: Min FPS</span>
   </h2>
+  <div id="fpsExplainer" style="font-size:11px;color:var(--muted);margin:-2px 0 8px 0;">FPS = frames per second (higher = smoother) • ms/frame = time per frame (lower = smoother)</div>
   <canvas id="fpsChart"></canvas>
 </section>
 
@@ -372,7 +373,17 @@ const I18N = {
     udpProbe: "UDP Probe",
     localRouter: "Local Router",
     gateway: "Gateway",
-    downloadUp: "Download / Up",
+    download: "Download",
+    upload: "Upload",
+    totalData: "Total Data (DL+UL)",
+    totalLabel: "Session",
+    msPerFrame: "ms/frame",
+    fpsSmooth: "Smooth",
+    fpsStable: "Stable",
+    fpsDrop: "Drop / Lag",
+    fpsExplainer: "FPS = frames per second (higher = smoother) • ms/frame = time per frame (lower = smoother)",
+    nowLabel: "Now",
+    minDropsLabel: "Min (drops)",
     thermalStates: {
       "Nominal": "Nominal",
       "Fair": "Fair",
@@ -442,7 +453,17 @@ const I18N = {
     udpProbe: "Sonda UDP",
     localRouter: "Roteador Local",
     gateway: "Gateway",
-    downloadUp: "Download / Up",
+    download: "Download",
+    upload: "Upload",
+    totalData: "Total de Dados (DL+UL)",
+    totalLabel: "Sessão",
+    msPerFrame: "ms/quadro",
+    fpsSmooth: "Fluido",
+    fpsStable: "Estável",
+    fpsDrop: "Queda / Travando",
+    fpsExplainer: "FPS = quadros por segundo (maior = melhor) • ms/quadro = tempo por quadro (menor = mais liso)",
+    nowLabel: "Agora",
+    minDropsLabel: "Mín (quedas)",
     thermalStates: {
       "Nominal": "Normal",
       "Fair": "Morno",
@@ -504,7 +525,17 @@ const I18N = {
     udpProbe: "Sonda UDP",
     localRouter: "Router Local",
     gateway: "Gateway",
-    downloadUp: "Descarga / Subida",
+    download: "Descarga",
+    upload: "Subida",
+    totalData: "Datos Totales (DL+UL)",
+    totalLabel: "Sesión",
+    msPerFrame: "ms/cuadro",
+    fpsSmooth: "Fluido",
+    fpsStable: "Estable",
+    fpsDrop: "Caída / Lag",
+    fpsExplainer: "FPS = cuadros por segundo (mayor = mejor) • ms/cuadro = tiempo por cuadro (menor = más fluido)",
+    nowLabel: "Ahora",
+    minDropsLabel: "Mín (caídas)",
     thermalStates: {
       "Nominal": "Nominal",
       "Fair": "Tibio",
@@ -615,6 +646,8 @@ function applyStaticTranslations() {
   document.getElementById("hwChartLegend").textContent = s.hwLegend;
   document.getElementById("netChartTitle").textContent = s.netTitle;
   document.getElementById("netChartLegend").textContent = s.netLegend;
+  document.getElementById("fpsChartTitle").textContent = s.fpsChartTitle;
+  document.getElementById("fpsExplainer").textContent = s.fpsExplainer;
   document.getElementById("incidentsTitle").textContent = s.incidentsTitle;
   document.getElementById("thTime").textContent = s.thTime;
   document.getElementById("thType").textContent = s.thType;
@@ -649,6 +682,27 @@ function pingColor(p, lost) {
   return "var(--red)";
 }
 
+function formatSpeed(bps) {
+  const v = Number(bps || 0);
+  if (v >= 1048576) return fmt(v / 1048576, 1) + " MB/s";
+  if (v >= 1024) return fmt0(v / 1024) + " KB/s";
+  return fmt0(v) + " B/s";
+}
+
+function formatBytes(bytes) {
+  const b = Number(bytes || 0);
+  if (b >= 1073741824) return fmt(b / 1073741824, 2) + " GB";
+  if (b >= 1048576) return fmt(b / 1048576, 1) + " MB";
+  if (b >= 1024) return fmt0(b / 1024) + " KB";
+  return fmt0(b) + " B";
+}
+
+function fpsStatus(fps, s) {
+  if (fps >= 55) return { label: s.fpsSmooth, color: "var(--green)" };
+  if (fps >= 28) return { label: s.fpsStable, color: "var(--yellow)" };
+  return { label: s.fpsDrop, color: "var(--red)" };
+}
+
 function renderKPIs(d) {
   const s = t();
   const cpuT = d.cpuTemperature ?? d.peakTemperature;
@@ -657,11 +711,15 @@ function renderKPIs(d) {
   const memGB = d.memoryUsedBytes / 1073741824;
   const lossPct = net.totalLossPercent || 0;
   const thm = (s.thermalStates && s.thermalStates[d.thermalState]) || d.thermalState || "--";
+  const dlSession = net.sessionDownloadBytes || 0;
+  const ulSession = net.sessionUploadBytes || 0;
+  const totSession = dlSession + ulSession;
+  const fStat = d.gameFPS != null ? fpsStatus(d.gameFPS, s) : null;
 
   const cards = [
     ...(d.gameFPS != null ? [
-      [s.gameFPS, fmt(d.gameFPS, 1) + " FPS", (d.gameName || "Metal") + " • " + fmt(d.gameFrameTimeMs, 1) + " ms", d.gameFPS >= 55 ? "var(--green)" : (d.gameFPS >= 30 ? "var(--yellow)" : "var(--red)")],
-      [s.gameVRAMRAM, fmt(d.gameVRAMMB, 1) + " MB", "RAM: " + fmt0(d.gameRAMMB) + " MB", "var(--accent)"]
+      [s.gameFPS, fmt(d.gameFPS, 1) + " FPS", `${fStat.label} • ${fmt(d.gameFrameTimeMs, 1)} ${s.msPerFrame}`, fStat.color],
+      [s.gameVRAMRAM, fmt(d.gameVRAMMB, 1) + " MB", `${d.gameName || "Metal"} • RAM ${fmt0(d.gameRAMMB)} MB`, "var(--accent)"]
     ] : []),
     ["CPU Die", cpuT != null ? fmt(cpuT, 1) + "°C" : "--", d.cpuSensorName || s.cpuSilicon, tempColor(cpuT)],
     ...(d.gpuTemperature != null ? [["GPU Die", fmt(d.gpuTemperature, 1) + "°C", d.gpuSensorName || s.gpuSilicon, tempColor(d.gpuTemperature)]] : []),
@@ -674,7 +732,9 @@ function renderKPIs(d) {
     [s.udpProbe, net.isUDPLastLost ? "DROP" : (net.udpPingMs != null ? fmt0(net.udpPingMs) + " ms" : "--"), (net.udpProbeHost || "1.1.1.1") + ":53", pingColor(net.udpPingMs, net.isUDPLastLost)],
     [s.localRouter, net.isGatewayLastProbeLost ? "DROP" : (net.gatewayPingMs != null ? fmt(net.gatewayPingMs, 1) + " ms" : "--"), net.gatewayHost || s.gateway, pingColor(net.gatewayPingMs, net.isGatewayLastProbeLost)],
     ["Jitter RFC", "±" + fmt(net.jitterMs, 1) + " ms", "P50 " + fmt0(net.p50Ms) + " • P99 " + fmt0(net.p99Ms), (net.jitterMs || 0) > 15 ? "var(--orange)" : "var(--green)"],
-    [s.downloadUp, fmt((net.downloadBytesPerSec || 0) / 1024, 0) + " KB/s", "Up: " + fmt((net.uploadBytesPerSec || 0) / 1024, 0) + " KB/s", "var(--text)"]
+    [s.download, formatSpeed(net.downloadBytesPerSec), `${s.totalLabel}: ${formatBytes(dlSession)}`, "var(--green)"],
+    [s.upload, formatSpeed(net.uploadBytesPerSec), `${s.totalLabel}: ${formatBytes(ulSession)}`, "var(--accent)"],
+    [s.totalData, formatBytes(totSession), `↓ ${formatBytes(dlSession)} • ↑ ${formatBytes(ulSession)}`, "var(--text)"]
   ];
 
   document.getElementById("kpiGrid").innerHTML = cards.map(([l, v, sub, c]) =>
@@ -753,8 +813,130 @@ function drawChart(canvasId, seriesList, buckets, dropField) {
   }
 }
 
-function renderAllCharts(buckets) {
+function drawFPSChart(buckets) {
   const s = t();
+  const fpsCard = document.getElementById("fpsChartCard");
+  let active = (buckets || []).filter(b => b.avgGameFPS != null && isFinite(b.avgGameFPS));
+  if (active.length === 0 && lastSnapshot && lastSnapshot.gameFPS != null) {
+    active = [{
+      timestamp: Date.now() / 1000,
+      avgGameFPS: lastSnapshot.gameFPS,
+      minGameFPS: lastSnapshot.gameFPS
+    }];
+  }
+
+  fpsCard.style.display = active.length > 0 ? "block" : "none";
+  if (active.length === 0) return;
+
+  document.getElementById("fpsChartTitle").textContent = s.fpsChartTitle;
+  document.getElementById("fpsExplainer").textContent = s.fpsExplainer;
+  const avgVals = active.map(b => b.avgGameFPS);
+  const minVals = active.map(b => b.minGameFPS != null ? b.minGameFPS : b.avgGameFPS);
+  const avgFPS = avgVals.reduce((a, b) => a + b, 0) / avgVals.length;
+  const minFPS = Math.min(...minVals);
+  const maxFPS = Math.max(...avgVals);
+  const nowPrefix = (lastSnapshot && lastSnapshot.gameFPS != null)
+    ? `${s.nowLabel}: ${fmt(lastSnapshot.gameFPS, 1)} (${fmt(lastSnapshot.gameFrameTimeMs, 1)} ${s.msPerFrame}) • `
+    : "";
+  document.getElementById("fpsChartLegend").textContent =
+    `${nowPrefix}${s.fpsChartLegend} • ${s.avgLabel} ${fmt(avgFPS, 1)} / ${s.minDropsLabel} ${fmt(minFPS, 1)} / ${s.maxLabel} ${fmt(maxFPS, 1)} FPS`;
+
+  const canvas = document.getElementById("fpsChart");
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (w <= 0 || h <= 0) return;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const padL = 48, padR = 14, padT = 12, padB = 24;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const peakData = Math.max(maxFPS, lastSnapshot && lastSnapshot.gameFPS != null ? lastSnapshot.gameFPS : 0);
+  const maxY = Math.max(35, Math.ceil((peakData * 1.15) / 10) * 10);
+
+  // Background guide lines at 30 / 60 / 120 FPS
+  const targets = maxY >= 100 ? [30, 60, 120] : [30, 60];
+  ctx.font = "11px monospace";
+  targets.forEach(refFPS => {
+    if (refFPS > maxY) return;
+    const y = padT + plotH - (refFPS / maxY) * plotH;
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = refFPS >= 60 ? "rgba(52,211,153,0.28)" : "rgba(250,204,21,0.28)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = refFPS >= 60 ? "#34d399" : "#facc15";
+    ctx.fillText(String(refFPS), 4, y + 4);
+  });
+
+  // Base 0 line & top ceiling label
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT + plotH); ctx.lineTo(w - padR, padT + plotH); ctx.stroke();
+  ctx.fillStyle = "#939bb0";
+  ctx.fillText("0", 4, padT + plotH + 3);
+  ctx.fillText(String(Math.round(maxY)), 4, padT + 9);
+
+  const xFor = idx => active.length === 1 ? padL + plotW * 0.5 : padL + (idx / (active.length - 1)) * plotW;
+
+  if (active.length === 1) {
+    const x = xFor(0);
+    const yAvg = padT + plotH - (active[0].avgGameFPS / maxY) * plotH;
+    ctx.fillStyle = "#34d399";
+    ctx.beginPath(); ctx.arc(x, yAvg, 5, 0, Math.PI * 2); ctx.fill();
+  } else {
+    // Min FPS (orange dashed)
+    ctx.save();
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = "#fb923c";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    active.forEach((b, idx) => {
+      const v = b.minGameFPS != null ? b.minGameFPS : b.avgGameFPS;
+      const x = xFor(idx);
+      const y = padT + plotH - (v / maxY) * plotH;
+      if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+
+    // Avg FPS (solid green)
+    ctx.strokeStyle = "#34d399";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    active.forEach((b, idx) => {
+      const x = xFor(idx);
+      const y = padT + plotH - (b.avgGameFPS / maxY) * plotH;
+      if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  // X-axis clock timestamps (start / mid / end)
+  ctx.fillStyle = "#939bb0";
+  ctx.font = "10px monospace";
+  const fmtTime = ts => new Date(ts * 1000).toLocaleTimeString();
+  if (active.length === 1) {
+    const lbl = fmtTime(active[0].timestamp);
+    ctx.fillText(lbl, Math.max(padL, xFor(0) - 24), padT + plotH + 15);
+  } else {
+    const firstLbl = fmtTime(active[0].timestamp);
+    const midIdx = Math.floor(active.length / 2);
+    const midLbl = fmtTime(active[midIdx].timestamp);
+    const lastLbl = fmtTime(active[active.length - 1].timestamp);
+    ctx.fillText(firstLbl, padL, padT + plotH + 15);
+    if (active.length >= 4) {
+      ctx.fillText(midLbl, padL + plotW * 0.5 - 24, padT + plotH + 15);
+    }
+    ctx.fillText(lastLbl, Math.max(padL + 60, w - padR - 54), padT + plotH + 15);
+  }
+}
+
+function renderAllCharts(buckets) {
   drawChart("hwChart", [
     { key: "maxCPUTemp", color: "#38bdf8" },
     { key: "maxGPUTemp", color: "#fb923c" },
@@ -765,28 +947,7 @@ function renderAllCharts(buckets) {
     { key: "maxUDPMs", color: "#fb923c" },
     { key: "maxGatewayMs", color: "#34d399" }
   ], buckets, "dropCount");
-
-  const fpsCard = document.getElementById("fpsChartCard");
-  const fpsValues = (buckets || []).map(b => b.avgGameFPS).filter(v => v != null && isFinite(v));
-  const minValues = (buckets || []).map(b => b.minGameFPS).filter(v => v != null && isFinite(v));
-  const hasGameFPS = fpsValues.length > 0 || (lastSnapshot && lastSnapshot.gameFPS != null);
-  fpsCard.style.display = hasGameFPS ? "block" : "none";
-  if (hasGameFPS) {
-    document.getElementById("fpsChartTitle").textContent = s.fpsChartTitle;
-    if (fpsValues.length > 0) {
-      const avgFPS = fpsValues.reduce((a, b) => a + b, 0) / fpsValues.length;
-      const minFPS = minValues.length > 0 ? Math.min(...minValues) : Math.min(...fpsValues);
-      const maxFPS = Math.max(...fpsValues);
-      document.getElementById("fpsChartLegend").textContent =
-        `${s.fpsChartLegend} • ${s.avgLabel} ${fmt(avgFPS, 1)} / ${s.minLabel} ${fmt(minFPS, 1)} / ${s.maxLabel} ${fmt(maxFPS, 1)} FPS`;
-    } else {
-      document.getElementById("fpsChartLegend").textContent = s.fpsChartLegend;
-    }
-    drawChart("fpsChart", [
-      { key: "avgGameFPS", color: "#34d399" },
-      { key: "minGameFPS", color: "#fb923c" }
-    ], buckets, null);
-  }
+  drawFPSChart(buckets);
 }
 
 function renderIncidents(events) {
@@ -813,6 +974,9 @@ async function pollSnapshot() {
     lastSnapshot = data;
     document.getElementById("liveDot").classList.remove("offline");
     renderKPIs(data);
+    if (data && data.gameFPS != null) {
+      drawFPSChart(lastBuckets);
+    }
   } catch {
     document.getElementById("liveDot").classList.add("offline");
   }

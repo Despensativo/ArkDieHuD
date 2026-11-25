@@ -133,6 +133,8 @@ public actor NetworkQualityMonitor {
     private var lastThroughputTimestamp: Date?
     private var lastTotalInBytes: UInt64 = 0
     private var lastTotalOutBytes: UInt64 = 0
+    private var sessionDownloadBytes: UInt64 = 0
+    private var sessionUploadBytes: UInt64 = 0
     private var currentDownloadBps: Double = 0.0
     private var currentUploadBps: Double = 0.0
 
@@ -251,6 +253,8 @@ public actor NetworkQualityMonitor {
         self.autoFallbackToTCP = false
         self.gatewayICMPFailures = 0
         self.gatewayUseTCPFallback = false
+        self.sessionDownloadBytes = 0
+        self.sessionUploadBytes = 0
         ICMPProber.clearDNSCache()
     }
 
@@ -341,7 +345,9 @@ public actor NetworkQualityMonitor {
             tcpPingMs: lastSample?.tcpRTTMs,
             isTCPLastLost: lastSample?.isTCPLost ?? false,
             tcpLostCount: self.tcpTrack.totalLost,
-            tcpLossPercent: self.tcpTrack.lossPercent
+            tcpLossPercent: self.tcpTrack.lossPercent,
+            sessionDownloadBytes: self.sessionDownloadBytes,
+            sessionUploadBytes: self.sessionUploadBytes
         )
     }
 
@@ -406,6 +412,8 @@ public actor NetworkQualityMonitor {
             let dt = max(0.1, now.timeIntervalSince(lastTime))
             let deltaIn = curIn >= self.lastTotalInBytes ? curIn - self.lastTotalInBytes : 0
             let deltaOut = curOut >= self.lastTotalOutBytes ? curOut - self.lastTotalOutBytes : 0
+            self.sessionDownloadBytes &+= deltaIn
+            self.sessionUploadBytes &+= deltaOut
             self.currentDownloadBps = Double(deltaIn) / dt
             self.currentUploadBps = Double(deltaOut) / dt
         }

@@ -290,6 +290,10 @@ struct NetworkSLACardView: View {
                         Text(self.network.downloadFormatted)
                             .font(.subheadline.bold())
                             .monospacedDigit()
+                        Text(self.network.sessionDownloadFormatted)
+                            .font(.caption2)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -305,6 +309,10 @@ struct NetworkSLACardView: View {
                         Text(self.network.uploadFormatted)
                             .font(.subheadline.bold())
                             .monospacedDigit()
+                        Text(self.network.sessionUploadFormatted)
+                            .font(.caption2)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -323,6 +331,17 @@ struct NetworkSLACardView: View {
                 }
                 .accessibilityLabel(L10n.tr("Reset session packet loss counters"))
                 .sensoryFeedback(.warning, trigger: self.resetTrigger)
+            }
+
+            HStack {
+                Label(L10n.tr("Total Data (DL + UL)"), systemImage: "arrow.up.arrow.down.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(self.network.sessionTotalFormatted)
+                    .font(.caption.bold())
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
             }
 
             NavigationLink(value: NavigationDestination.networkDiagnostics) {

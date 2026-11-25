@@ -280,6 +280,8 @@ public struct NetworkQualityMetrics: Codable, Sendable, Equatable {
     public let isTCPLastLost: Bool
     public let tcpLostCount: Int
     public let tcpLossPercent: Double
+    public let sessionDownloadBytes: UInt64
+    public let sessionUploadBytes: UInt64
 
     public init(
         target: NetworkProbeTarget,
@@ -329,7 +331,9 @@ public struct NetworkQualityMetrics: Codable, Sendable, Equatable {
         tcpPingMs: Double? = nil,
         isTCPLastLost: Bool = false,
         tcpLostCount: Int = 0,
-        tcpLossPercent: Double = 0.0
+        tcpLossPercent: Double = 0.0,
+        sessionDownloadBytes: UInt64 = 0,
+        sessionUploadBytes: UInt64 = 0
     ) {
         self.target = target
         self.pingMs = pingMs
@@ -379,6 +383,8 @@ public struct NetworkQualityMetrics: Codable, Sendable, Equatable {
         self.isTCPLastLost = isTCPLastLost
         self.tcpLostCount = tcpLostCount
         self.tcpLossPercent = tcpLossPercent
+        self.sessionDownloadBytes = sessionDownloadBytes
+        self.sessionUploadBytes = sessionUploadBytes
     }
 
     public static let placeholder = NetworkQualityMetrics(
@@ -432,6 +438,22 @@ public struct NetworkQualityMetrics: Codable, Sendable, Equatable {
         Self.formatSpeed(self.uploadBytesPerSec)
     }
 
+    public var sessionTotalBytes: UInt64 {
+        self.sessionDownloadBytes &+ self.sessionUploadBytes
+    }
+
+    public var sessionDownloadFormatted: String {
+        Self.formatBytes(self.sessionDownloadBytes)
+    }
+
+    public var sessionUploadFormatted: String {
+        Self.formatBytes(self.sessionUploadBytes)
+    }
+
+    public var sessionTotalFormatted: String {
+        Self.formatBytes(self.sessionTotalBytes)
+    }
+
     private static func formatSpeed(_ bytesPerSec: Double) -> String {
         if bytesPerSec >= 1_048_576.0 {
             return String(format: "%.1f MB/s", bytesPerSec / 1_048_576.0)
@@ -439,6 +461,19 @@ public struct NetworkQualityMetrics: Codable, Sendable, Equatable {
             return String(format: "%.0f KB/s", bytesPerSec / 1024.0)
         } else {
             return String(format: "%.0f B/s", bytesPerSec)
+        }
+    }
+
+    private static func formatBytes(_ bytes: UInt64) -> String {
+        let value = Double(bytes)
+        if value >= 1_073_741_824.0 {
+            return String(format: "%.2f GB", value / 1_073_741_824.0)
+        } else if value >= 1_048_576.0 {
+            return String(format: "%.1f MB", value / 1_048_576.0)
+        } else if value >= 1024.0 {
+            return String(format: "%.0f KB", value / 1024.0)
+        } else {
+            return "\(bytes) B"
         }
     }
 }

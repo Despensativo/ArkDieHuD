@@ -10354,6 +10354,35 @@
           }
         }
       }
+    },
+    "Total Data (DL + UL)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total Data (DL + UL)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datos Totales (DL + UL)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total de Dados (DL + UL)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total de Dados (DL + UL)"
+          }
+        }
+      }
     }
   }
 }
