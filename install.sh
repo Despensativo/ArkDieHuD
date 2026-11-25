@@ -92,33 +92,39 @@ for d in devs:
     if hw.get("reality") != "physical" or conn.get("pairingState") != "paired":
         continue
     ident = d.get("identifier") or ""
+    udid = hw.get("udid") or ident
     name = props.get("name", "Dispositivo iOS/iPadOS")
     model = hw.get("productType", "iOS")
     tunnel = conn.get("tunnelState", "unknown")
-    is_ipad = 0 if ("ipad" in model.lower() or "ipad" in name.lower()) else 1
+    transport = conn.get("transportType", "")
+    is_wired = 0 if transport == "wired" else 1
     is_conn = 0 if tunnel == "connected" else 1
-    physical.append((is_ipad, is_conn, name, model, tunnel, ident))
+    is_ipad = 0 if ("ipad" in model.lower() or "ipad" in name.lower()) else 1
+    physical.append((is_wired, is_conn, is_ipad, name, model, tunnel, transport, ident, udid))
 physical.sort()
-for _, _, name, model, tunnel, ident in physical:
-    print(f"{ident}\t{name}\t{model}\t{tunnel}")
+for _, _, _, name, model, tunnel, transport, ident, udid in physical:
+    print(f"{ident}\t{udid}\t{name}\t{model}\t{tunnel}\t{transport}")
 '
 )"
 
 if [ -z "${DEVICES_LINES}" ]; then
     echo "❌ Nenhum iPad/iPhone físico pareado encontrado."
     echo "👉 Como resolver:"
-    echo "   1. Conecte o cabo USB-C entre o Mac e o iPad."
+    echo "   1. Conecte o cabo USB-C entre o Mac e o iPad/iPhone."
     echo "   2. Desbloqueie a tela e toque em 'Confiar neste Computador'."
-    echo "   3. Ative Ajustes -> Privacidade e Segurança -> Modo Desenvolvedor no iPad."
+    echo "   3. Ative Ajustes -> Privacidade e Segurança -> Modo Desenvolvedor no aparelho."
     exit 1
 fi
 
 DEVICE_IDS=()
+DEVICE_UDIDS=()
 DEVICE_LABELS=()
-while IFS=$'\t' read -r d_id d_name d_model d_tunnel; do
+while IFS=$'\t' read -r d_id d_udid d_name d_model d_tunnel d_transport; do
     [ -z "$d_id" ] && continue
     DEVICE_IDS+=("$d_id")
-    DEVICE_LABELS+=("${d_name} (${d_model}, tunnel=${d_tunnel})")
+    DEVICE_UDIDS+=("$d_udid")
+    t_label="${d_transport:-unknown}"
+    DEVICE_LABELS+=("${d_name} (${d_model}, ${t_label}, tunnel=${d_tunnel})")
 done <<< "$DEVICES_LINES"
 
 SELECTED_INDEX=0
@@ -137,13 +143,14 @@ if [ "${#DEVICE_IDS[@]}" -gt 1 ] && [ "$CHECK_ONLY" -eq 0 ]; then
 fi
 
 TARGET_DEVICE_ID="${DEVICE_IDS[$SELECTED_INDEX]}"
+TARGET_DEVICE_UDID="${DEVICE_UDIDS[$SELECTED_INDEX]}"
 TARGET_DEVICE_LABEL="${DEVICE_LABELS[$SELECTED_INDEX]}"
 echo "✅ Alvo selecionado: ${TARGET_DEVICE_LABEL}"
 
 if [ "$CHECK_ONLY" -eq 0 ]; then
     LOCK_OUT="$(xcrun devicectl device info lockState --device "$TARGET_DEVICE_ID" 2>&1 || true)"
-    if printf "%s" "$LOCK_OUT" | grep -qiE "passcodeRequired: true|Locked"; then
-        echo "🔒 O aparelho parece estar bloqueado. Desbloqueie a tela do iPad agora."
+    if printf "%s" "$LOCK_OUT" | grep -qE "passcodeRequired:[[:space:]]*true"; then
+        echo "🔒 A tela do aparelho está bloqueada. Desbloqueie o iPad/iPhone agora."
         read -r -p "Pressione ENTER quando a tela estiver desbloqueada... " _
     fi
 fi
@@ -272,14 +279,19 @@ fi
 echo ""
 
 # ------------------------------------------------------------------------------
-# 4. Compilar, Instalar e Abrir no iPad
+# 4. Compilar, Instalar e Abrir no Aparelho
 # ------------------------------------------------------------------------------
+XCODE_DEST="generic/platform=iOS"
+if [ -n "${TARGET_DEVICE_UDID:-}" ]; then
+    XCODE_DEST="platform=iOS,id=${TARGET_DEVICE_UDID}"
+fi
+
 echo "[4/4] Compilando ArkDieHuD (Release) e assinando para o dispositivo..."
 xcodebuild \
     -project "${PROJECT_PATH}" \
     -scheme SwiftSensorsApp \
     -configuration Release \
-    -destination "generic/platform=iOS" \
+    -destination "${XCODE_DEST}" \
     -allowProvisioningUpdates \
     -derivedDataPath "${DERIVED_DATA}" \
     build
@@ -311,4 +323,4 @@ echo "============================================================"
 echo "  ✅ ArkDieHuD instalado e aberto com sucesso!"
 echo "============================================================"
 echo "💡 Se usou Apple ID gratuito, o app vale por 7 dias."
-echo "   Para renovar depois, conecte o iPad e rode ./install.sh de novo."
+echo "   Para renovar depois, conecte o aparelho e rode ./install.sh de novo."
