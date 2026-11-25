@@ -71,12 +71,18 @@ Activa **Grabar logs de telemetría (24h)** para guardar métricas cada 15s, con
 
 ---
 
-## 6. Bonus: FPS Reales con Apple Metal HUD
+## 6. Bonus: FPS Reales en CUALQUIER Juego o App con Apple Metal HUD
 
-```bash
-./launch_metal_hud.sh flash
-./launch_metal_hud.sh
-```
+Puedes lanzar **cualquier juego o app instalado en tu iPad** con el contador nativo de Apple (`MTL_HUD_ENABLED=1`) usando `./launch_metal_hud.sh` en Mac:
+
+1. **Menú interactivo (sin configurar nada):** `./launch_metal_hud.sh`
+2. **Búsqueda por nombre:** `./launch_metal_hud.sh genshin` o `./launch_metal_hud.sh cod`
+3. **Listar Bundle IDs y lanzar directo:**
+   ```bash
+   ./launch_metal_hud.sh --list
+   ./launch_metal_hud.sh --bundle com.ejemplo.tujuego
+   ```
+4. **Guardar tus propios atajos (manualmente o con una IA):** edita `CUSTOM_SHORTCUTS` al inicio de `launch_metal_hud.sh`. Si usas una IA, pídele: *"Ejecuta `./launch_metal_hud.sh --list` y añade mis juegos en `CUSTOM_SHORTCUTS` dentro de `launch_metal_hud.sh`."*
 
 ---
 

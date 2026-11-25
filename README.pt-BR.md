@@ -68,9 +68,12 @@ cd ArkDieHuD
 # 2) Gerar .ipa para conta Apple gratuita (Sideloadly / AltStore / SideStore)
 ./Scripts/export-ipa.sh
 
-# 3) Opcional: Abrir jogo no iPad pareado com Apple Metal Performance HUD (FPS real)
-./launch_metal_hud.sh flash
-./launch_metal_hud.sh
+# 3) Opcional: Abrir QUALQUER jogo ou app no iPad com Apple Metal FPS HUD
+./launch_metal_hud.sh                         # Menu interativo (todos os apps instalados)
+./launch_metal_hud.sh <nome_do_app>           # Busca por nome (ex: genshin, cod, pubg, capcut)
+./launch_metal_hud.sh --list                  # Lista todos os apps e seus Bundle IDs
+./launch_metal_hud.sh --bundle <bundle.id>    # Inicia direto pelo Bundle ID exato
+# Dica: salve atalhos fixos em `CUSTOM_SHORTCUTS` dentro de `launch_metal_hud.sh` (ou peça para sua IA ajustar).
 
 # 4) Opcional: Túnel USB para ver o painel do PC em http://127.0.0.1:8787
 iproxy 8787 8787

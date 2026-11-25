@@ -100,15 +100,39 @@ iPadOS aggressively suspends background apps if another app captures the microph
 
 ---
 
-## 6. Bonus: Live FPS with Apple Metal Performance HUD
+## 6. Bonus: Live FPS on ANY Game or App with Apple Metal Performance HUD
 
-Combine **ArkDieHuD** with Apple's native GPU FPS counter (`MTL_HUD_ENABLED=1`) using the included launcher script on your Mac:
+Combine **ArkDieHuD** with Apple's native GPU FPS counter (`MTL_HUD_ENABLED=1`) using `./launch_metal_hud.sh` on your Mac — it works with **any** installed game or app, not only built-in examples:
 
-```bash
-./launch_metal_hud.sh flash     # Launches PUBG FLASH with Metal HUD
-./launch_metal_hud.sh pubg      # Launches PUBG MOBILE with Metal HUD
-./launch_metal_hud.sh           # Interactive menu of all installed apps
-```
+1. **Interactive Menu (Zero Setup):**
+   ```bash
+   ./launch_metal_hud.sh
+   ```
+   Lists every user app on your iPad; just type its number and press Enter.
+
+2. **Quick Search by Name:**
+   ```bash
+   ./launch_metal_hud.sh genshin     # Finds and launches Genshin Impact
+   ./launch_metal_hud.sh cod         # Finds and launches Call of Duty Mobile
+   ./launch_metal_hud.sh capcut      # Works on creative/video apps too
+   ```
+
+3. **Find Exact Bundle ID & Launch Directly:**
+   ```bash
+   ./launch_metal_hud.sh --list
+   ./launch_metal_hud.sh --bundle com.example.yourgame
+   ```
+
+4. **Save Your Own 1-Word Shortcuts (Manually or Using an AI Assistant):**
+   Open `launch_metal_hud.sh` and add your favorite games to `CUSTOM_SHORTCUTS`:
+   ```python
+   CUSTOM_SHORTCUTS = {
+       "genshin": ("Genshin Impact", "com.miHoYo.GenshinImpact"),
+       # ...
+   }
+   ```
+   > **Using an AI coding assistant?** Paste this prompt:
+   > *"Run `./launch_metal_hud.sh --list`, find my installed games/apps, and add 1-word shortcuts for them into `CUSTOM_SHORTCUTS` inside `launch_metal_hud.sh`."*
 
 See [METAL_HUD_GUIDE.md](METAL_HUD_GUIDE.md) for device pairing troubleshooting.
 

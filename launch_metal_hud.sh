@@ -19,6 +19,23 @@ PRIORITY_APPS = [
     ("com.blackmagic-design.DaVinciResolveiPad", "DaVinci Resolve"),
 ]
 
+# Custom 1-word CLI shortcuts -> ("Display Name", "com.bundle.identifier").
+# Users or AI assistants can add any app discovered via `./launch_metal_hud.sh --list`.
+CUSTOM_SHORTCUTS: dict[str, tuple[str, str]] = {
+    "pubg": ("PUBG MOBILE", "com.tencent.ig"),
+    "pubgm": ("PUBG MOBILE", "com.tencent.ig"),
+    "global": ("PUBG MOBILE", "com.tencent.ig"),
+    "flash": ("PUBGM FLASH", "com.tencent.igfit"),
+    "fit": ("PUBGM FLASH", "com.tencent.igfit"),
+    "pubgflash": ("PUBGM FLASH", "com.tencent.igfit"),
+    "pubgmflash": ("PUBGM FLASH", "com.tencent.igfit"),
+    "davinci": ("DaVinci Resolve", "com.blackmagic-design.DaVinciResolveiPad"),
+    "resolve": ("DaVinci Resolve", "com.blackmagic-design.DaVinciResolveiPad"),
+    # Examples — uncomment or add any app from `./launch_metal_hud.sh --list`:
+    # "genshin": ("Genshin Impact", "com.miHoYo.GenshinImpact"),
+    # "cod": ("Call of Duty Mobile", "com.activision.callofduty.shooter"),
+}
+
 
 def parse_devicectl_json(stdout: str) -> dict:
     json_start = stdout.find("{")
@@ -151,15 +168,21 @@ def print_help() -> None:
         """Uso: ./launch_metal_hud.sh [OPÇÕES] [ATALHO_OU_BUSCA]
 
 Opções:
-  --help, -h         Exibe este guia de uso e exemplos
-  --devices          Lista os iPads/iPhones físicos pareados e mostra o padrão detectado
-  --device <UDID>    Força o lançamento em um UDID específico (ou defina METAL_HUD_DEVICE_ID)
+  --help, -h             Exibe este guia de uso e exemplos
+  --devices              Lista os iPads/iPhones físicos pareados e mostra o padrão detectado
+  --device <UDID>        Força o lançamento em um UDID específico (ou defina METAL_HUD_DEVICE_ID)
+  --list                 Lista todos os apps/jogos instalados no iPad com seus Bundle IDs exatos
+  --bundle <BUNDLE_ID>   Inicia diretamente qualquer app pelo Bundle ID (ex: com.miHoYo.GenshinImpact)
 
-Atalhos rápidos:
-  flash | fit        PUBGM FLASH (com.tencent.igfit)
-  pubg | global      PUBG MOBILE (com.tencent.ig)
-  davinci | resolve  DaVinci Resolve (com.blackmagic-design.DaVinciResolveiPad)
-  <termo>            Busca o primeiro app cujo nome/bundle contenha <termo>
+Atalhos rápidos e busca:
+  flash | fit            PUBGM FLASH (com.tencent.igfit)
+  pubg | global          PUBG MOBILE (com.tencent.ig)
+  davinci | resolve      DaVinci Resolve (com.blackmagic-design.DaVinciResolveiPad)
+  <termo>                Busca automaticamente por nome ou Bundle ID (ex: genshin, cod, capcut)
+
+Dica de personalização (manual ou via IA):
+  1) Rode `./launch_metal_hud.sh --list` para descobrir o Bundle ID de qualquer jogo/app.
+  2) Adicione em `CUSTOM_SHORTCUTS` no topo de `launch_metal_hud.sh` ou passe `--bundle <ID>`.
 
 Sem argumentos: lista todos os apps do iPad para escolha numérica interativa."""
     )
@@ -180,10 +203,12 @@ def print_devices() -> None:
         )
 
 
-def parse_args(argv: list[str]) -> tuple[bool, bool, str | None, str | None]:
+def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | None, str | None]:
     show_help = False
     show_devices = False
+    list_apps = False
     cli_device = None
+    cli_bundle = None
     positional = None
 
     i = 0
@@ -193,6 +218,16 @@ def parse_args(argv: list[str]) -> tuple[bool, bool, str | None, str | None]:
             show_help = True
         elif arg == "--devices":
             show_devices = True
+        elif arg == "--list":
+            list_apps = True
+        elif arg == "--bundle":
+            if i + 1 >= len(argv):
+                print("❌ Faltou informar o Bundle ID após --bundle.")
+                sys.exit(2)
+            cli_bundle = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--bundle="):
+            cli_bundle = arg.split("=", 1)[1].strip()
         elif arg == "--device":
             if i + 1 >= len(argv):
                 print("❌ Faltou informar o UDID após --device.")
@@ -205,11 +240,11 @@ def parse_args(argv: list[str]) -> tuple[bool, bool, str | None, str | None]:
             positional = arg.lower().strip()
         i += 1
 
-    return show_help, show_devices, cli_device, positional
+    return show_help, show_devices, list_apps, cli_device, cli_bundle, positional
 
 
 def main() -> None:
-    show_help, show_devices, cli_device, arg = parse_args(sys.argv[1:])
+    show_help, show_devices, list_apps, cli_device, cli_bundle, arg = parse_args(sys.argv[1:])
 
     if show_help:
         print_help()
@@ -222,14 +257,13 @@ def main() -> None:
     device_id, device_label = resolve_device_id(cli_device)
     print(f"🎯 Alvo detectado: {device_label}")
 
-    if arg in ("pubg", "pubgm", "global"):
-        launch_app(device_id, "PUBG MOBILE", "com.tencent.ig")
+    if cli_bundle:
+        launch_app(device_id, cli_bundle, cli_bundle)
         return
-    if arg in ("flash", "fit", "pubgflash", "pubgmflash"):
-        launch_app(device_id, "PUBGM FLASH", "com.tencent.igfit")
-        return
-    if arg in ("davinci", "resolve"):
-        launch_app(device_id, "DaVinci Resolve", "com.blackmagic-design.DaVinciResolveiPad")
+
+    if not list_apps and arg and arg in CUSTOM_SHORTCUTS:
+        name, bundle_id = CUSTOM_SHORTCUTS[arg]
+        launch_app(device_id, name, bundle_id)
         return
 
     print("🔍 Carregando lista de jogos e aplicativos instalados...")
@@ -250,7 +284,29 @@ def main() -> None:
 
     all_apps = ordered_priority + other_apps
 
+    if list_apps:
+        print("\n📱 Aplicativos e Bundle IDs Instalados no Dispositivo:")
+        print("------------------------------------------------------------------")
+        for idx, app in enumerate(all_apps, 1):
+            name = app.get("name", "Sem Nome")
+            bundle_id = app.get("bundleIdentifier", "")
+            print(f"  [{idx:2d}] {name:<26} {bundle_id}")
+        print("------------------------------------------------------------------")
+        print("👉 Use `./launch_metal_hud.sh --bundle <BUNDLE_ID>` ou adicione em `CUSTOM_SHORTCUTS`.\n")
+        return
+
     if arg:
+        exact_bundle = next(
+            (a for a in all_apps if a.get("bundleIdentifier", "").lower() == arg),
+            None,
+        )
+        if exact_bundle:
+            launch_app(
+                device_id,
+                exact_bundle.get("name", arg),
+                exact_bundle.get("bundleIdentifier", arg),
+            )
+            return
         matched = [
             a
             for a in all_apps

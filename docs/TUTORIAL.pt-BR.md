@@ -100,15 +100,39 @@ O iPadOS pode suspender apps em segundo plano quando o jogo ativa o microfone (c
 
 ---
 
-## 6. Bônus: FPS Real com Apple Metal Performance HUD
+## 6. Bônus: FPS Real em QUALQUER Jogo ou App com Apple Metal HUD
 
-Para ver **FPS em tempo real** e Frame Time junto com a telemetria do ArkDieHuD, conecte o iPad ao Mac e rode:
+Você pode abrir **qualquer jogo ou aplicativo instalado no iPad** com o contador oficial da Apple (`MTL_HUD_ENABLED=1`) usando o script `./launch_metal_hud.sh` no Mac (os atalhos `flash`/`pubg`/`davinci` são apenas exemplos):
 
-```bash
-./launch_metal_hud.sh flash     # Abre PUBGM FLASH com Metal HUD
-./launch_metal_hud.sh pubg      # Abre PUBG MOBILE com Metal HUD
-./launch_metal_hud.sh           # Menu interativo com todos os apps do iPad
-```
+1. **Menu Interativo (Sem configurar nada):**
+   ```bash
+   ./launch_metal_hud.sh
+   ```
+   Lista todos os aplicativos do seu iPad; basta digitar o número do app que você quer monitorar.
+
+2. **Busca Rápida por Nome:**
+   ```bash
+   ./launch_metal_hud.sh genshin     # Busca e abre Genshin Impact
+   ./launch_metal_hud.sh cod         # Busca e abre Call of Duty Mobile
+   ./launch_metal_hud.sh capcut      # Funciona também em apps de edição/vídeo
+   ```
+
+3. **Descobrir o Bundle ID exato e abrir direto:**
+   ```bash
+   ./launch_metal_hud.sh --list
+   ./launch_metal_hud.sh --bundle com.exemplo.seujogo
+   ```
+
+4. **Salvar seus próprios atalhos (Manualmente ou pedindo para uma IA):**
+   Edite o dicionário `CUSTOM_SHORTCUTS` no topo de `launch_metal_hud.sh`:
+   ```python
+   CUSTOM_SHORTCUTS = {
+       "genshin": ("Genshin Impact", "com.miHoYo.GenshinImpact"),
+       # ...
+   }
+   ```
+   > **Quer pedir para uma IA ajustar para você?** Cole este prompt:
+   > *"Rode `./launch_metal_hud.sh --list`, veja meus jogos/apps instalados no iPad e adicione atalhos de 1 palavra para eles em `CUSTOM_SHORTCUTS` dentro do `launch_metal_hud.sh`."*
 
 Consulte [METAL_HUD_GUIDE.md](METAL_HUD_GUIDE.md) para detalhes de pareamento.
 

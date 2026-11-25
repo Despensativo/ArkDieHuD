@@ -33,13 +33,15 @@ Execute a partir da raiz do repositório `swift-sensors`:
 # 1) Menu interativo com todos os jogos/apps instalados no iPad
 ./launch_metal_hud.sh
 
-# 2) Atalhos diretos para jogos/apps populares
+# 2) Atalhos diretos de exemplo (editáveis em `CUSTOM_SHORTCUTS`)
 ./launch_metal_hud.sh flash     # PUBGM FLASH (com.tencent.igfit)
 ./launch_metal_hud.sh pubg      # PUBG MOBILE (com.tencent.ig)
 ./launch_metal_hud.sh davinci   # DaVinci Resolve iPad
 
-# 3) Buscar qualquer app por nome ou bundle identifier
+# 3) Buscar QUALQUER app por nome ou abrir direto pelo Bundle ID
 ./launch_metal_hud.sh capcut
+./launch_metal_hud.sh --list                     # Lista todos os apps + Bundle IDs
+./launch_metal_hud.sh --bundle com.exemplo.app   # Inicia pelo Bundle ID exato
 
 # 4) Inspecionar dispositivos pareados e ajuda
 ./launch_metal_hud.sh --devices
