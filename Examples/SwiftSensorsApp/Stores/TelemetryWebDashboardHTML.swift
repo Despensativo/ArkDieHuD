@@ -322,14 +322,23 @@ enum TelemetryWebDashboardHTML {
   <p id="metalHudHint" style="margin:0;font-size:11px;color:var(--muted);line-height:1.45;">
     macOS: click Copy Mac Command, paste into Terminal and press Enter (no Gatekeeper or chmod prompts; works over Wi-Fi or USB). Windows: download Windows (.bat), install Python 3 + Apple Devices/iTunes USB driver, and right-click -&gt; Run as Administrator.
   </p>
-  <details id="hudOpacityGuideDetails" open style="margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.22);font-size:11.5px;line-height:1.55;">
-    <summary id="hudOpacityGuideTitle" style="cursor:pointer;font-weight:600;color:var(--accent);">Step-by-step: Check or Remove Apple Metal HUD Opacity on iPad/iPhone</summary>
-    <ol style="margin:8px 0 0 0;padding-left:18px;color:var(--text);">
-      <li id="hudStep1">On your iPad/iPhone, open Settings → Developer → Graphics HUD (even with "Show Graphics HUD" turned OFF, iOS/iPadOS applies the Opacity saved there when returning to a game).</li>
-      <li id="hudStep2">To REMOVE on-screen HUD (100% invisible even after switching apps): keep "Show Graphics HUD" OFF, drag "HUD Opacity" all the way down to 0%, and select "Invisible (Web Only)" above.</li>
-      <li id="hudStep3">To CHECK or SHOW on screen again: go back to Settings → Developer → Graphics HUD, raise "HUD Opacity" back to 100%, and select "Opacity: 100%" above.</li>
-      <li id="hudStep4">Keep the Terminal (Mac) or Command Prompt (.bat Windows) window open while playing so live FPS keeps streaming to :8787 (press Control+C when finished).</li>
-    </ol>
+  <details id="hudOpacityGuideDetails" open style="margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.22);font-size:11.5px;line-height:1.5;">
+    <summary id="hudOpacityGuideTitle" style="cursor:pointer;font-weight:600;color:var(--accent);">Step-by-step: check or hide Metal HUD opacity</summary>
+    <div id="hudGuideBaseStep" style="margin-top:8px;color:var(--text);font-weight:500;">1. On your iPad/iPhone, open Settings → Developer → Graphics HUD and keep Show Graphics HUD turned OFF.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-top:8px;">
+      <div style="padding:8px 10px;border-radius:7px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.25);">
+        <div id="hudHideCardTitle" style="font-weight:600;color:var(--green);margin-bottom:4px;">Hide on screen (Web only)</div>
+        <div id="hudHideLine1" style="color:var(--text);">• In Settings, drag Opacity down to 0%.</div>
+        <div id="hudHideLine2" style="color:var(--text);">• Above, choose Invisible (Web Only).</div>
+        <div id="hudHideNote" style="color:var(--muted);font-size:11px;margin-top:3px;">Stays 100% invisible even if you leave and return to the game.</div>
+      </div>
+      <div style="padding:8px 10px;border-radius:7px;background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.25);">
+        <div id="hudShowCardTitle" style="font-weight:600;color:var(--accent);margin-bottom:4px;">Check or show on screen again</div>
+        <div id="hudShowLine1" style="color:var(--text);">• In Settings, raise Opacity back to 100%.</div>
+        <div id="hudShowLine2" style="color:var(--text);">• Above, choose Opacity: 100% and relaunch via the command.</div>
+      </div>
+    </div>
+    <div id="hudStreamTip" style="margin-top:8px;color:var(--muted);font-size:11px;">Tip: keep Terminal (Mac) or the .bat window (Windows) open while playing so live FPS updates here (Control+C to stop).</div>
   </details>
 </section>
 
@@ -364,11 +373,16 @@ const I18N = {
     dlWinBtn: "Windows (.bat)",
     dlPyBtn: "Python Script (.py)",
     metalHudHint: "macOS: click Copy Mac Command, paste into Terminal and press Enter (no Gatekeeper or chmod prompts; works over Wi-Fi or USB). Windows: download Windows (.bat), install Python 3 + Apple Devices/iTunes USB driver, and right-click -> Run as Administrator.",
-    hudOpacityGuideTitle: "Step-by-step: Check or Remove Apple Metal HUD Opacity on iPad/iPhone",
-    hudStep1: "On your iPad/iPhone, open Settings → Developer → Graphics HUD (even with 'Show Graphics HUD' turned OFF, iOS/iPadOS applies the Opacity saved there when returning to a game).",
-    hudStep2: "To REMOVE on-screen HUD (100% invisible even after switching apps): keep 'Show Graphics HUD' OFF, drag 'HUD Opacity' all the way down to 0%, and select 'Invisible (Web Only)' above.",
-    hudStep3: "To CHECK or SHOW on screen again: go back to Settings → Developer → Graphics HUD, raise 'HUD Opacity' back to 100%, and select 'Opacity: 100%' above.",
-    hudStep4: "Keep the Terminal (Mac) or Command Prompt (.bat Windows) window open while playing so live FPS keeps streaming to :8787 (press Control+C when finished).",
+    hudOpacityGuideTitle: "Step-by-step: check or hide Metal HUD opacity",
+    hudGuideBaseStep: "1. On your iPad/iPhone, open Settings → Developer → Graphics HUD and keep Show Graphics HUD turned OFF.",
+    hudHideCardTitle: "Hide on screen (Web only)",
+    hudHideLine1: "• In Settings, drag Opacity down to 0%.",
+    hudHideLine2: "• Above, choose Invisible (Web Only).",
+    hudHideNote: "Stays 100% invisible even if you leave and return to the game.",
+    hudShowCardTitle: "Check or show on screen again",
+    hudShowLine1: "• In Settings, raise Opacity back to 100%.",
+    hudShowLine2: "• Above, choose Opacity: 100% and relaunch via the command.",
+    hudStreamTip: "Tip: keep Terminal (Mac) or the .bat window (Windows) open while playing so live FPS updates here (Control+C to stop).",
     hwTitle: "Silicon & Power (CPU / GPU / Watts)",
     hwLegend: "Blue: CPU °C • Orange: GPU °C • Purple: W",
     netTitle: "Network & Drops (Target / UDP / Router)",
@@ -454,11 +468,16 @@ const I18N = {
     dlWinBtn: "Windows (.bat)",
     dlPyBtn: "Script Python (.py)",
     metalHudHint: "macOS: clique em Copiar Comando Mac, cole no Terminal e aperte Enter (sem bloqueio do Gatekeeper nem chmod; funciona via Wi-Fi ou USB). Windows: baixe Windows (.bat), tenha Python 3 + driver USB Dispositivos Apple/iTunes e clique com botão direito -> Executar como Administrador.",
-    hudOpacityGuideTitle: "Passo a passo: checar ou tirar a opacidade do Metal HUD no iPad/iPhone",
-    hudStep1: "No iPad/iPhone, abra Ajustes → Desenvolvedor → Graphics HUD (mesmo com 'Show Graphics HUD' desligado, o iOS/iPadOS usa a Opacidade salva ali ao minimizar e voltar para o jogo).",
-    hudStep2: "Para TIRAR a opacidade da tela (100% invisível mesmo saindo/voltando do jogo): mantenha 'Show Graphics HUD' desligado, arraste 'Opacidade / HUD Opacity' até 0% (mínimo) nos Ajustes e escolha 'Invisível (Só Web)' acima.",
-    hudStep3: "Para CHECAR ou VOLTAR A VER na tela: volte em Ajustes → Desenvolvedor → Graphics HUD, suba a 'Opacidade' (ex.: 100%) e escolha 'Opacidade: 100%' acima.",
-    hudStep4: "Mantenha a janela do Terminal (Mac) ou Prompt (.bat Windows) aberta durante a partida para os dados de FPS continuarem carregando ao vivo aqui no :8787 (aperte Control+C ao terminar).",
+    hudOpacityGuideTitle: "Passo a passo: checar ou tirar a opacidade do Metal HUD",
+    hudGuideBaseStep: "1. No iPad/iPhone, abra Ajustes → Desenvolvedor → Graphics HUD e mantenha Show Graphics HUD desligado.",
+    hudHideCardTitle: "Ocultar da tela (ver FPS só na Web)",
+    hudHideLine1: "• Nos Ajustes do aparelho, arraste Opacidade até 0%.",
+    hudHideLine2: "• No seletor acima, escolha Invisível (Só Web).",
+    hudHideNote: "Fica 100% invisível mesmo se você sair e voltar para o jogo.",
+    hudShowCardTitle: "Checar ou voltar a ver na tela",
+    hudShowLine1: "• Nos Ajustes do aparelho, suba Opacidade para 100%.",
+    hudShowLine2: "• No seletor acima, escolha Opacidade: 100% e reabra pelo comando.",
+    hudStreamTip: "Dica: mantenha o Terminal (Mac) ou janela .bat (Windows) aberto enquanto joga para o FPS atualizar ao vivo (Control+C para parar).",
     hwTitle: "Silício e Energia (CPU / GPU / Watts)",
     hwLegend: "Azul: CPU °C • Laranja: GPU °C • Roxo: W",
     netTitle: "Rede e Drops (Alvo / UDP / Roteador)",
@@ -536,11 +555,16 @@ const I18N = {
     dlWinBtn: "Windows (.bat)",
     dlPyBtn: "Script Python (.py)",
     metalHudHint: "macOS: pulsa Copiar Comando Mac, pega en Terminal y presiona Enter (sin bloqueo de Gatekeeper ni chmod; funciona por Wi-Fi o USB). Windows: descarga Windows (.bat), instala Python 3 + driver USB Apple Devices/iTunes y clic derecho -> Ejecutar como Administrador.",
-    hudOpacityGuideTitle: "Paso a paso: revisar o quitar la opacidad del Metal HUD en iPad/iPhone",
-    hudStep1: "En tu iPad/iPhone, abre Ajustes → Desarrollador → Graphics HUD (incluso con 'Show Graphics HUD' desactivado, iOS/iPadOS aplica la Opacidad guardada allí al volver al juego).",
-    hudStep2: "Para QUITAR la opacidad en pantalla (100% invisible incluso al cambiar de app): mantén 'Show Graphics HUD' desactivado, baja 'HUD Opacity / Opacidad' al 0% en Ajustes y elige 'Invisible (Solo Web)' arriba.",
-    hudStep3: "Para REVISAR o VOLVER A VER en pantalla: vuelve a Ajustes → Desarrollador → Graphics HUD, sube 'Opacidad' al 100% y selecciona 'Opacidad: 100%' arriba.",
-    hudStep4: "Mantén abierta la ventana de Terminal (Mac) o Símbolo del sistema (.bat Windows) mientras juegas para que el FPS siga cargando en vivo aquí en :8787 (pulsa Control+C al terminar).",
+    hudOpacityGuideTitle: "Paso a paso: revisar o quitar la opacidad del Metal HUD",
+    hudGuideBaseStep: "1. En tu iPad/iPhone, abre Ajustes → Desarrollador → Graphics HUD y mantén Show Graphics HUD desactivado.",
+    hudHideCardTitle: "Ocultar en pantalla (ver FPS solo en Web)",
+    hudHideLine1: "• En Ajustes del dispositivo, baja Opacidad al 0%.",
+    hudHideLine2: "• En el selector de arriba, elige Invisible (Solo Web).",
+    hudHideNote: "Permanece 100% invisible incluso al salir y volver al juego.",
+    hudShowCardTitle: "Revisar o volver a ver en pantalla",
+    hudShowLine1: "• En Ajustes del dispositivo, sube Opacidad al 100%.",
+    hudShowLine2: "• En el selector de arriba, elige Opacidad: 100% y reabre con el comando.",
+    hudStreamTip: "Consejo: mantén abierta la Terminal (Mac) o ventana .bat (Windows) mientras juegas para actualizar el FPS en vivo (Control+C para detener).",
     hwTitle: "Silicio y Energía (CPU / GPU / Watts)",
     hwLegend: "Azul: CPU °C • Naranja: GPU °C • Púrpura: W",
     netTitle: "Red y Drops (Destino / UDP / Router)",
@@ -738,10 +762,15 @@ function applyStaticTranslations() {
   document.getElementById("dlPyBtn").textContent = s.dlPyBtn;
   document.getElementById("metalHudHint").textContent = s.metalHudHint;
   document.getElementById("hudOpacityGuideTitle").textContent = s.hudOpacityGuideTitle;
-  document.getElementById("hudStep1").textContent = s.hudStep1;
-  document.getElementById("hudStep2").textContent = s.hudStep2;
-  document.getElementById("hudStep3").textContent = s.hudStep3;
-  document.getElementById("hudStep4").textContent = s.hudStep4;
+  document.getElementById("hudGuideBaseStep").textContent = s.hudGuideBaseStep;
+  document.getElementById("hudHideCardTitle").textContent = s.hudHideCardTitle;
+  document.getElementById("hudHideLine1").textContent = s.hudHideLine1;
+  document.getElementById("hudHideLine2").textContent = s.hudHideLine2;
+  document.getElementById("hudHideNote").textContent = s.hudHideNote;
+  document.getElementById("hudShowCardTitle").textContent = s.hudShowCardTitle;
+  document.getElementById("hudShowLine1").textContent = s.hudShowLine1;
+  document.getElementById("hudShowLine2").textContent = s.hudShowLine2;
+  document.getElementById("hudStreamTip").textContent = s.hudStreamTip;
   document.getElementById("hwChartTitle").textContent = s.hwTitle;
   document.getElementById("hwChartLegend").textContent = s.hwLegend;
   document.getElementById("netChartTitle").textContent = s.netTitle;
