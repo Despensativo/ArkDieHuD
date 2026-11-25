@@ -218,14 +218,61 @@ def format_hud_summary(hud_env: dict[str, str]) -> str:
     return " | ".join(parts) if parts else "padrão completo Apple"
 
 
-def find_idevicesyslog() -> str | None:
+def find_tool(name: str) -> str | None:
     for cand in (
-        shutil.which("idevicesyslog"),
-        "/opt/homebrew/bin/idevicesyslog",
-        "/usr/local/bin/idevicesyslog",
+        shutil.which(name),
+        f"/opt/homebrew/bin/{name}",
+        f"/usr/local/bin/{name}",
     ):
         if cand and os.path.isfile(cand) and os.access(cand, os.X_OK):
             return cand
+    return None
+
+
+def list_usbmux_udids(idevice_id_bin: str | None, network: bool = False) -> list[str]:
+    if not idevice_id_bin:
+        return []
+    cmd = [idevice_id_bin, "-l", "-n"] if network else [idevice_id_bin, "-l"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
+    except Exception:
+        return []
+    if res.returncode != 0:
+        return []
+    return [line.strip() for line in res.stdout.splitlines() if line.strip()]
+
+
+def has_pymobiledevice3() -> bool:
+    try:
+        res = subprocess.run(
+            [sys.executable, "-m", "pymobiledevice3", "version"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        return res.returncode == 0
+    except Exception:
+        return False
+
+
+def resolve_syslog_command(udid: str) -> list[str] | None:
+    syslog_bin = find_tool("idevicesyslog")
+    idevice_id_bin = find_tool("idevice_id")
+    usb_udids: list[str] = []
+    if syslog_bin:
+        if not idevice_id_bin:
+            return [syslog_bin, "-u", udid]
+        usb_udids = list_usbmux_udids(idevice_id_bin, network=False)
+        if udid in usb_udids:
+            return [syslog_bin, "-u", udid]
+        net_udids = list_usbmux_udids(idevice_id_bin, network=True)
+        if udid in net_udids:
+            return [syslog_bin, "-n", "-u", udid]
+
+    if has_pymobiledevice3():
+        if udid in usb_udids:
+            return [sys.executable, "-m", "pymobiledevice3", "syslog", "live", "--udid", udid]
+        return [sys.executable, "-m", "pymobiledevice3", "syslog", "live", "--mobdev2"]
     return None
 
 
@@ -277,11 +324,15 @@ def stream_metal_hud_to_web(
     max_seconds: float | None = None,
 ) -> None:
     endpoint = stream_web_url.rstrip("/") + "/api/metal-hud"
-    syslog_bin = find_idevicesyslog()
-    if syslog_bin:
-        cmd = [syslog_bin, "-u", udid]
-    else:
-        cmd = [sys.executable, "-m", "pymobiledevice3", "syslog", "live", "--udid", udid]
+    cmd = resolve_syslog_command(udid)
+    if not cmd:
+        print("\n⚠️  Não foi possível capturar o syslog do iPhone/iPad para enviar FPS ao painel Web.")
+        print("Como liberar o envio de FPS em tempo real:")
+        print("  1) Conecte o iPhone/iPad pelo cabo USB no Mac (mais estável), OU")
+        print("  2) No Finder com o cabo conectado 1 vez, marque: 'Mostrar este iPad/iPhone quando estiver na rede Wi-Fi' (habilita idevicesyslog -n sem fio), OU")
+        print("  3) Instale o pymobiledevice3: python3 -m pip install pymobiledevice3")
+        print("✅ O Metal HUD no aparelho continua ativo normalmente.")
+        return
 
     print(f"📡 Transmitindo FPS + VRAM + RAM para {endpoint} (Ctrl+C para encerrar)")
     proc = subprocess.Popen(

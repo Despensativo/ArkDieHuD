@@ -332,6 +332,7 @@ const I18N = {
     presetMinimal: "Minimal (FPS + GPU)",
     presetFull: "Apple Full",
     streamWebLabel: "Stream FPS to Web Monitor + 24h Log",
+    fpsWaitingHint: "Run --stream-web launcher",
     gameFPS: "Game FPS",
     gameVRAMRAM: "Game VRAM / RAM",
     fpsChartTitle: "Game FPS History (Avg / Min)",
@@ -412,6 +413,7 @@ const I18N = {
     presetMinimal: "Mínimo (FPS + GPU)",
     presetFull: "Completo Apple",
     streamWebLabel: "Enviar FPS ao Painel Web + Log 24h",
+    fpsWaitingHint: "Aguardando --stream-web",
     gameFPS: "FPS do Jogo",
     gameVRAMRAM: "VRAM / RAM do Jogo",
     fpsChartTitle: "Histórico de FPS do Jogo (Média / Mín)",
@@ -484,6 +486,7 @@ const I18N = {
     presetMinimal: "Mínimo (FPS + GPU)",
     presetFull: "Completo Apple",
     streamWebLabel: "Enviar FPS al Monitor Web + Log 24h",
+    fpsWaitingHint: "Esperando --stream-web",
     gameFPS: "FPS del Juego",
     gameVRAMRAM: "VRAM / RAM del Juego",
     fpsChartTitle: "Historial de FPS del Juego (Prom / Mín)",
@@ -602,8 +605,43 @@ function getMacLaunchCommand() {
   return cmd;
 }
 
+const HUD_PREFS_KEY = "arkdiehud_metal_hud_v1";
+
+function saveMetalHUDPrefs(p) {
+  try {
+    localStorage.setItem(HUD_PREFS_KEY, JSON.stringify({
+      elements: p.elements,
+      align: p.align,
+      scale: p.scale,
+      streamWeb: Boolean(p.streamWeb)
+    }));
+  } catch (e) {}
+}
+
+function loadMetalHUDPrefs() {
+  try {
+    const raw = localStorage.getItem(HUD_PREFS_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved && typeof saved.elements === "string") {
+      const wanted = new Set(saved.elements.split(",").map(x => x.trim()).filter(Boolean));
+      document.querySelectorAll("input[data-hud-el]").forEach(cb => {
+        cb.checked = wanted.has(cb.dataset.hudEl);
+      });
+    }
+    const alignEl = document.getElementById("hudAlignSelect");
+    if (alignEl && typeof saved.align === "string") alignEl.value = saved.align;
+    const scaleEl = document.getElementById("hudScaleSelect");
+    if (scaleEl && typeof saved.scale === "string") scaleEl.value = saved.scale;
+    const streamEl = document.getElementById("hudStreamWebToggle");
+    if (streamEl && typeof saved.streamWeb === "boolean") streamEl.checked = saved.streamWeb;
+  } catch (e) {}
+  syncHudPresetButtons();
+}
+
 function updateMetalHUDControls() {
   const p = getSelectedHudParams();
+  saveMetalHUDPrefs(p);
   document.getElementById("macCmdPreview").textContent = getMacLaunchCommand();
   const qp = new URLSearchParams();
   if (p.elements) qp.set("elements", p.elements);
@@ -720,7 +758,9 @@ function renderKPIs(d) {
     ...(d.gameFPS != null ? [
       [s.gameFPS, fmt(d.gameFPS, 1) + " FPS", `${fStat.label} • ${fmt(d.gameFrameTimeMs, 1)} ${s.msPerFrame}`, fStat.color],
       [s.gameVRAMRAM, fmt(d.gameVRAMMB, 1) + " MB", `${d.gameName || "Metal"} • RAM ${fmt0(d.gameRAMMB)} MB`, "var(--accent)"]
-    ] : []),
+    ] : [
+      [s.gameFPS, "-- FPS", s.fpsWaitingHint, "var(--muted)"]
+    ]),
     ["CPU Die", cpuT != null ? fmt(cpuT, 1) + "°C" : "--", d.cpuSensorName || s.cpuSilicon, tempColor(cpuT)],
     ...(d.gpuTemperature != null ? [["GPU Die", fmt(d.gpuTemperature, 1) + "°C", d.gpuSensorName || s.gpuSilicon, tempColor(d.gpuTemperature)]] : []),
     [s.cpuLoad, fmt0(d.cpuTotalPercent) + "%", d.topology ? d.topology.totalCores + " " + s.cores : "CPU", d.cpuTotalPercent >= 85 ? "var(--red)" : "var(--accent)"],
@@ -1072,6 +1112,7 @@ document.getElementById("hudStreamWebToggle").addEventListener("change", updateM
 document.getElementById("hudAlignSelect").addEventListener("change", updateMetalHUDControls);
 document.getElementById("hudScaleSelect").addEventListener("change", updateMetalHUDControls);
 
+loadMetalHUDPrefs();
 applyStaticTranslations();
 pollSnapshot();
 pollHistoryAndIncidents();
