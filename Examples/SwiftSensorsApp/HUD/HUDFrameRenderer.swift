@@ -5,10 +5,69 @@ import CoreVideo
 import Foundation
 import UIKit
 
-/// High-DPI CoreGraphics renderer that draws TelemetrySnapshot directly into an
+/// High-DPI CoreGraphics renderer that draws TelemetrySnapshot directly into a pooled
 /// IOSurface-backed CVPixelBuffer -> CMSampleBuffer for Picture-in-Picture overlay.
+@MainActor
 enum HUDFrameRenderer {
     private static let scale: CGFloat = 2.0
+    private static let deviceRGBColorSpace: CGColorSpace = CGColorSpaceCreateDeviceRGB()
+
+    private static var cachedPoolWidth: Int = 0
+    private static var cachedPoolHeight: Int = 0
+    private static var cachedPixelBufferPool: CVPixelBufferPool?
+
+    private static func acquirePixelBuffer(width: Int, height: Int) -> CVPixelBuffer? {
+        if let pool = self.cachedPixelBufferPool,
+           self.cachedPoolWidth == width,
+           self.cachedPoolHeight == height {
+            var pooledBuffer: CVPixelBuffer?
+            if CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pooledBuffer) == kCVReturnSuccess,
+               let pooledBuffer {
+                return pooledBuffer
+            }
+        }
+
+        let poolAttrs: [CFString: Any] = [
+            kCVPixelBufferPoolMinimumBufferCountKey: 3
+        ]
+        let bufferAttrs: [CFString: Any] = [
+            kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey: width,
+            kCVPixelBufferHeightKey: height,
+            kCVPixelBufferCGImageCompatibilityKey: true,
+            kCVPixelBufferCGBitmapContextCompatibilityKey: true,
+            kCVPixelBufferIOSurfacePropertiesKey: [:] as [CFString: Any],
+        ]
+
+        var newPool: CVPixelBufferPool?
+        if CVPixelBufferPoolCreate(
+            kCFAllocatorDefault,
+            poolAttrs as CFDictionary,
+            bufferAttrs as CFDictionary,
+            &newPool
+        ) == kCVReturnSuccess, let newPool {
+            self.cachedPoolWidth = width
+            self.cachedPoolHeight = height
+            self.cachedPixelBufferPool = newPool
+
+            var pooledBuffer: CVPixelBuffer?
+            if CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, newPool, &pooledBuffer) == kCVReturnSuccess,
+               let pooledBuffer {
+                return pooledBuffer
+            }
+        }
+
+        var fallbackBuffer: CVPixelBuffer?
+        let status = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            width,
+            height,
+            kCVPixelFormatType_32BGRA,
+            bufferAttrs as CFDictionary,
+            &fallbackBuffer
+        )
+        return status == kCVReturnSuccess ? fallbackBuffer : nil
+    }
 
     static func makeSampleBuffer(
         snapshot: TelemetrySnapshot,
@@ -23,22 +82,7 @@ enum HUDFrameRenderer {
         let pixelWidth = Int(size.width * scale)
         let pixelHeight = Int(size.height * scale)
 
-        let attrs: [CFString: Any] = [
-            kCVPixelBufferCGImageCompatibilityKey: true,
-            kCVPixelBufferCGBitmapContextCompatibilityKey: true,
-            kCVPixelBufferIOSurfacePropertiesKey: [:] as [CFString: Any],
-        ]
-
-        var pixelBufferOut: CVPixelBuffer?
-        let status = CVPixelBufferCreate(
-            kCFAllocatorDefault,
-            pixelWidth,
-            pixelHeight,
-            kCVPixelFormatType_32BGRA,
-            attrs as CFDictionary,
-            &pixelBufferOut
-        )
-        guard status == kCVReturnSuccess, let pixelBuffer = pixelBufferOut else {
+        guard let pixelBuffer = self.acquirePixelBuffer(width: pixelWidth, height: pixelHeight) else {
             return nil
         }
 
@@ -50,7 +94,6 @@ enum HUDFrameRenderer {
         }
 
         let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
         let bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
 
         guard let cgContext = CGContext(
@@ -59,7 +102,7 @@ enum HUDFrameRenderer {
             height: pixelHeight,
             bitsPerComponent: 8,
             bytesPerRow: bytesPerRow,
-            space: colorSpace,
+            space: self.deviceRGBColorSpace,
             bitmapInfo: bitmapInfo
         ) else {
             return nil

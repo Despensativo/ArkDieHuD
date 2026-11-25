@@ -20,6 +20,8 @@ struct HardwareTopology: Codable, Sendable, Equatable {
     /// Real CPU frequency in MHz if exposed by OS; nil when iPadOS blocks DVFS frequency
     let frequencyMHz: Double?
 
+    static let cached: HardwareTopology = HardwareTopology.current()
+
     static func current() -> HardwareTopology {
         let model = sysctlString("hw.machine") ?? "iPad"
         let total = ProcessInfo.processInfo.processorCount
@@ -70,6 +72,49 @@ struct HardwareTopology: Codable, Sendable, Equatable {
             return nil
         }
         return String(cString: buffer)
+    }
+}
+
+/// Caches slow/diagnostic metrics (disk, uptime, VM regions, thread list) for 10 seconds
+/// so 1Hz telemetry polling avoids redundant Mach IPC & file-system syscalls every second.
+private actor SlowSnapshotMetricsCache {
+    static let shared = SlowSnapshotMetricsCache()
+
+    private struct CachedValues {
+        let timestamp: Date
+        let disk: DiskStats
+        let uptime: String
+        let vmMetrics: VMMemoryMetrics
+        let threadSummary: ProcessThreadSummary
+    }
+
+    private var cached: CachedValues?
+    private let ttlSeconds: TimeInterval = 10.0
+
+    func get(using sensors: SwiftSensors) async -> (DiskStats, String, VMMemoryMetrics, ProcessThreadSummary) {
+        let now = Date()
+        if let existing = self.cached, now.timeIntervalSince(existing.timestamp) < self.ttlSeconds {
+            return (existing.disk, existing.uptime, existing.vmMetrics, existing.threadSummary)
+        }
+
+        async let diskTask = sensors.getDiskStats()
+        async let uptimeTask = sensors.getFormattedUptime()
+        async let vmMetricsTask = sensors.getVMMemoryMetrics()
+        async let threadSummaryTask = sensors.getThreadCPUSummary()
+
+        let disk = await diskTask
+        let uptime = await uptimeTask
+        let vmMetrics = await vmMetricsTask
+        let threadSummary = await threadSummaryTask
+
+        self.cached = CachedValues(
+            timestamp: now,
+            disk: disk,
+            uptime: uptime,
+            vmMetrics: vmMetrics,
+            threadSummary: threadSummary
+        )
+        return (disk, uptime, vmMetrics, threadSummary)
     }
 }
 
@@ -159,11 +204,8 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
         async let currentTask = sensors.getCurrentSensorReadings()
         async let memoryTask = sensors.getMemoryStats()
         async let cpuTask = sensors.getCPUStats()
-        async let diskTask = sensors.getDiskStats()
         async let thermalStateTask = sensors.getThermalState()
-        async let uptimeTask = sensors.getFormattedUptime()
-        async let vmMetricsTask = sensors.getVMMemoryMetrics()
-        async let threadSummaryTask = sensors.getThreadCPUSummary()
+        async let slowTask = SlowSnapshotMetricsCache.shared.get(using: sensors)
         async let networkTask = sensors.getNetworkQualityMetrics()
 
         let thermals = await thermalTask
@@ -171,11 +213,8 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
         let currents = await currentTask
         let memory = await memoryTask
         let cpu = await cpuTask
-        let disk = await diskTask
         let thermalState = await thermalStateTask
-        let uptime = await uptimeTask
-        let vmMetrics = await vmMetricsTask
-        let threadSummary = await threadSummaryTask
+        let (disk, uptime, vmMetrics, threadSummary) = await slowTask
         let network = await networkTask
 
         let (batteryPercent, isCharging) = await MainActor.run { () -> (Int?, Bool) in
@@ -306,7 +345,7 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
             cpuTotalPercent: cpu.totalUsage,
             cpuUserPercent: cpu.userUsage,
             cpuSystemPercent: cpu.systemUsage,
-            topology: HardwareTopology.current(),
+            topology: HardwareTopology.cached,
             memoryUsedBytes: memory.totalUsedMemory,
             memoryTotalBytes: memory.totalMemory,
             memoryFreeBytes: memory.freeMemory,
