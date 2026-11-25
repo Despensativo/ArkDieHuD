@@ -12,8 +12,16 @@ if [ -z "$STAGED_FILES" ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 1. Privacidade e Segredos (arquivos sensíveis + diff staged)
+# 1. Privacidade, Identidade Git e Segredos (arquivos sensíveis + diff staged)
 # ------------------------------------------------------------------------------
+AUTHOR_IDENT="$(git -C "$REPO_ROOT" var GIT_AUTHOR_IDENT 2>/dev/null || true)"
+COMMITTER_IDENT="$(git -C "$REPO_ROOT" var GIT_COMMITTER_IDENT 2>/dev/null || true)"
+if printf "%s\n%s\n" "$AUTHOR_IDENT" "$COMMITTER_IDENT" | grep -Eq '(^User <|@[^>]+\.(lan|local)>)'; then
+    echo "❌ pre-commit bloqueado: identidade Git expõe usuário/hostname local ($AUTHOR_IDENT)." >&2
+    echo "   Configure: git config user.name \"Despensativo\" && git config user.email \"137121462+Despensativo@users.noreply.github.com\"" >&2
+    exit 1
+fi
+
 BLOCKED_NAMES="$(printf "%s\n" "$STAGED_FILES" | grep -E '\.(db|sqlite|sqlite3|p12|mobileprovision)$|(^|/)\.env$' || true)"
 if [ -n "$BLOCKED_NAMES" ]; then
     echo "❌ pre-commit bloqueado: arquivos locais/sensíveis não devem ser versionados:" >&2

@@ -16,9 +16,10 @@ Este repositório opera 100% offline no macOS sem depender de GitHub Actions. To
    - Antes de alterar arquivos como `HUDFrameRenderer.swift`, `SlideOverHUDView.swift` ou `SensorBase.swift`, execute a skill `.agents/skills/spec-impact/SKILL.md` e registre o Mini-Plano de Impacto.
    - Sempre busque helpers existentes com `rg -n "<termo>" Sources/ Examples/` antes de criar funções novas.
 
-3. **Hooks Git automáticos (`Scripts/hooks`):**
+3. **Hooks Git automáticos (`Scripts/hooks`) e Identidade de Commits:**
    - Já ativados via `Scripts/install-hooks.sh` (`git config core.hooksPath Scripts/hooks`).
-   - **`pre-commit`**: bloqueia arquivos locais/sensíveis (`*.db`, `*.sqlite`, `*.p12`, UDIDs/tokens no diff), executa `xcrun swift-format lint` nos `.swift` staged, valida sintaxe de `*.sh` (Python ou Bash pelo shebang) e alerta quando um `.swift` > 300 linhas é alterado.
+   - **Identidade Git padrão (privacidade pública)**: Mantenha configurado `git config user.name "Despensativo"` e `git config user.email "137121462+Despensativo@users.noreply.github.com"` para evitar exposição de usuário/hostname local (`@*.lan` ou `@*.local`) no histórico público.
+   - **`pre-commit`**: bloqueia identidade Git local (`User` / `@*.lan` / `@*.local`), arquivos sensíveis (`*.db`, `*.sqlite`, `*.p12`, UDIDs/tokens no diff), executa `xcrun swift-format lint` nos `.swift` staged, valida sintaxe de `*.sh` (Python ou Bash pelo shebang) e alerta quando um `.swift` > 300 linhas é alterado.
    - **`pre-push`**: exige que o build offline `xcodebuild ... -destination "generic/platform=iOS" CODE_SIGNING_ALLOWED=NO` passe com `BUILD SUCCEEDED`.
 
 ---

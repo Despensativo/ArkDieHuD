@@ -11,5 +11,6 @@ trigger: always_on
 - **FPS de jogos terceiros -> proibido usar `CADisplayLink` no HUD**: Sandbox do iPadOS impede leitura de FPS de outros apps (`CADisplayLink` apenas lê a taxa ProMotion 120Hz do próprio processo). Nunca reintroduzir FPS/1% Low/Mediana nos overlays PiP ou no `SlideOverHUDView`.
 - **Perda de pacotes -> métrica cumulativa contínua**: `totalLostCount / totalProbes * 100` deve acumular por toda a sessão e nunca desaparecer automaticamente após estabilização da rede.
 - **Script `launch_metal_hud.sh` -> interpretado por `python3`**: Apesar da extensão `.sh`, usa `#!/usr/bin/env python3`; validar sintaxe com `python3 -m py_compile` (nunca `bash -n`).
-- **Privacidade absoluta -> zero IDs literais versionados**: Nunca gravar UDIDs de dispositivo, `DEVELOPMENT_TEAM`, e-mails ou tokens em código, scripts, regras ou documentação.
+- **Privacidade absoluta -> zero IDs literais versionados**: Nunca gravar UDIDs de dispositivo, `DEVELOPMENT_TEAM`, e-mails pessoais ou tokens em código, scripts, regras ou documentação.
+- **Identidade Git padronizada -> proibido hostname local**: Commits neste repositório devem usar identidade genérica pública (`Despensativo <137121462+Despensativo@users.noreply.github.com>`), nunca expondo usuário/hostname da rede local (`User` ou `@*.lan` / `@*.local`).
 - **Operação Git -> confirmar raiz do repositório**: Sempre executar `git -C` dentro de `swift-sensors/` (nunca na pasta pai `/Volumes/--400GB--/FEITOS COM IA/Ipad`).
