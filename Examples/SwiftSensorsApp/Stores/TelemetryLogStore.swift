@@ -15,6 +15,10 @@ struct TelemetryLogBucket: Identifiable, Codable, Sendable {
     let dropCount: Int
     let udpDropCount: Int
     let sampleCount: Int
+    let avgGameFPS: Double?
+    let minGameFPS: Double?
+    let avgGameVRAMMB: Double?
+    let avgGameRAMMB: Double?
 }
 
 struct TelemetryLogStatus: Sendable {
@@ -104,8 +108,9 @@ actor TelemetryLogStore {
                 ts, cpu_temp, gpu_temp, peak_temp, cpu_pct, ram_used_gb, ram_pct,
                 watts, battery_pct, is_charging, thermal_state,
                 ping_ms, icmp_ms, udp_ms, tcp_ms, gateway_ms, jitter_ms,
-                is_lost, is_udp_lost, is_gw_lost, is_vpn, dl_bps, ul_bps, target_host
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                is_lost, is_udp_lost, is_gw_lost, is_vpn, dl_bps, ul_bps, target_host,
+                game_fps, game_vram_mb, game_ram_mb, game_name
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """
 
         var stmt: OpaquePointer?
@@ -144,12 +149,23 @@ actor TelemetryLogStore {
             sqlite3_bind_int(stmt, 21, snap.network.route.isVPNActive ? 1 : 0)
             sqlite3_bind_double(stmt, 22, snap.network.downloadBytesPerSec)
             sqlite3_bind_double(stmt, 23, snap.network.uploadBytesPerSec)
+            self.bindOptionalDouble(stmt, index: 25, value: snap.gameFPS)
+            self.bindOptionalDouble(stmt, index: 26, value: snap.gameVRAMMB)
+            self.bindOptionalDouble(stmt, index: 27, value: snap.gameRAMMB)
 
             snap.thermalState.withCString { thermalPtr in
                 snap.network.target.host.withCString { hostPtr in
                     sqlite3_bind_text(stmt, 11, thermalPtr, -1, nil)
                     sqlite3_bind_text(stmt, 24, hostPtr, -1, nil)
-                    _ = sqlite3_step(stmt)
+                    if let gameName = snap.gameName {
+                        gameName.withCString { gamePtr in
+                            sqlite3_bind_text(stmt, 28, gamePtr, -1, nil)
+                            _ = sqlite3_step(stmt)
+                        }
+                    } else {
+                        sqlite3_bind_null(stmt, 28)
+                        _ = sqlite3_step(stmt)
+                    }
                     sqlite3_reset(stmt)
                     sqlite3_clear_bindings(stmt)
                 }
@@ -237,7 +253,11 @@ actor TelemetryLogStore {
                    MAX(gateway_ms),
                    COALESCE(SUM(is_lost), 0),
                    COALESCE(SUM(is_udp_lost), 0),
-                   COUNT(*)
+                   COUNT(*),
+                   AVG(game_fps),
+                   MIN(game_fps),
+                   AVG(game_vram_mb),
+                   AVG(game_ram_mb)
             FROM telemetry_samples
             WHERE ts >= ?
             GROUP BY bkt
@@ -270,7 +290,11 @@ actor TelemetryLogStore {
                 maxGatewayMs: self.readOptionalDouble(stmt, col: 9),
                 dropCount: Int(sqlite3_column_int64(stmt, 10)),
                 udpDropCount: Int(sqlite3_column_int64(stmt, 11)),
-                sampleCount: Int(sqlite3_column_int64(stmt, 12))
+                sampleCount: Int(sqlite3_column_int64(stmt, 12)),
+                avgGameFPS: self.readOptionalDouble(stmt, col: 13),
+                minGameFPS: self.readOptionalDouble(stmt, col: 14),
+                avgGameVRAMMB: self.readOptionalDouble(stmt, col: 15),
+                avgGameRAMMB: self.readOptionalDouble(stmt, col: 16)
             ))
         }
         return result
@@ -286,7 +310,7 @@ actor TelemetryLogStore {
         let outURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("SwiftSensors_Telemetria_\(minutes)m.csv")
 
-        let header = "timestamp,cpu_temp_c,gpu_temp_c,peak_temp_c,cpu_pct,ram_used_gb,ram_pct,watts,battery_pct,is_charging,thermal_state,ping_ms,icmp_ms,udp_ms,tcp_ms,gateway_ms,jitter_ms,is_lost,is_udp_lost,is_gw_lost,is_vpn,dl_bps,ul_bps,target_host\n"
+        let header = "timestamp,cpu_temp_c,gpu_temp_c,peak_temp_c,cpu_pct,ram_used_gb,ram_pct,watts,battery_pct,is_charging,thermal_state,ping_ms,icmp_ms,udp_ms,tcp_ms,gateway_ms,jitter_ms,is_lost,is_udp_lost,is_gw_lost,is_vpn,dl_bps,ul_bps,target_host,game_fps,game_vram_mb,game_ram_mb,game_name\n"
         do {
             try header.write(to: outURL, atomically: true, encoding: .utf8)
         } catch {
@@ -301,7 +325,8 @@ actor TelemetryLogStore {
             SELECT ts, cpu_temp, gpu_temp, peak_temp, cpu_pct, ram_used_gb, ram_pct,
                    watts, battery_pct, is_charging, thermal_state,
                    ping_ms, icmp_ms, udp_ms, tcp_ms, gateway_ms, jitter_ms,
-                   is_lost, is_udp_lost, is_gw_lost, is_vpn, dl_bps, ul_bps, target_host
+                   is_lost, is_udp_lost, is_gw_lost, is_vpn, dl_bps, ul_bps, target_host,
+                   game_fps, game_vram_mb, game_ram_mb, game_name
             FROM telemetry_samples
             WHERE ts >= ?
             ORDER BY ts ASC;
@@ -345,8 +370,12 @@ actor TelemetryLogStore {
             let dl = String(format: "%.0f", sqlite3_column_double(stmt, 21))
             let ul = String(format: "%.0f", sqlite3_column_double(stmt, 22))
             let host = self.readText(stmt, col: 23).replacingOccurrences(of: ",", with: "_")
+            let gameFPS = self.formatOptionalDouble(stmt, col: 24, decimals: 1)
+            let gameVRAM = self.formatOptionalDouble(stmt, col: 25, decimals: 1)
+            let gameRAM = self.formatOptionalDouble(stmt, col: 26, decimals: 1)
+            let gameName = self.readText(stmt, col: 27).replacingOccurrences(of: ",", with: "_")
 
-            chunk.append("\(tsStr),\(cpuT),\(gpuT),\(peakT),\(cpuPct),\(ramGB),\(ramPct),\(watts),\(bat),\(chg),\(thermal),\(ping),\(icmp),\(udp),\(tcp),\(gw),\(jit),\(lost),\(udpLost),\(gwLost),\(vpn),\(dl),\(ul),\(host)\n")
+            chunk.append("\(tsStr),\(cpuT),\(gpuT),\(peakT),\(cpuPct),\(ramGB),\(ramPct),\(watts),\(bat),\(chg),\(thermal),\(ping),\(icmp),\(udp),\(tcp),\(gw),\(jit),\(lost),\(udpLost),\(gwLost),\(vpn),\(dl),\(ul),\(host),\(gameFPS),\(gameVRAM),\(gameRAM),\(gameName)\n")
 
             if chunk.utf8.count >= 16_384 {
                 if let data = chunk.data(using: .utf8) {
@@ -420,10 +449,18 @@ actor TelemetryLogStore {
                 is_vpn INTEGER NOT NULL,
                 dl_bps REAL NOT NULL,
                 ul_bps REAL NOT NULL,
-                target_host TEXT NOT NULL
+                target_host TEXT NOT NULL,
+                game_fps REAL,
+                game_vram_mb REAL,
+                game_ram_mb REAL,
+                game_name TEXT
             );
             """
         self.executePragmaOrSQL(schemaSQL, on: handle)
+        self.executePragmaOrSQL("ALTER TABLE telemetry_samples ADD COLUMN game_fps REAL;", on: handle)
+        self.executePragmaOrSQL("ALTER TABLE telemetry_samples ADD COLUMN game_vram_mb REAL;", on: handle)
+        self.executePragmaOrSQL("ALTER TABLE telemetry_samples ADD COLUMN game_ram_mb REAL;", on: handle)
+        self.executePragmaOrSQL("ALTER TABLE telemetry_samples ADD COLUMN game_name TEXT;", on: handle)
         self.db = handle
         return handle
     }

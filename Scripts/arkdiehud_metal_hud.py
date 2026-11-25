@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-ArkDieHuD — Apple Metal Performance HUD Launcher (macOS / Windows / Linux)
+ArkDieHuD — Apple Metal Performance HUD Launcher + Syslog FPS Bridge
 Ativa o contador oficial da Apple (MTL_HUD_ENABLED=1) em qualquer app ou jogo
-no iPhone/iPad (FPS, GPU e Frame Time) via `xcrun devicectl` (macOS, Wi-Fi/USB)
-ou `pymobiledevice3` (Windows/Linux ou Mac sem Xcode).
+no iPhone/iPad via `xcrun devicectl` (macOS, Wi-Fi/USB) ou `pymobiledevice3`
+(Windows/Linux ou Mac sem Xcode), e opcionalmente transmite FPS/VRAM/RAM
+em tempo real para o painel web `:8787` e logs 24h (`--stream-web`).
 """
 
 import atexit
@@ -14,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 from typing import Dict, List, Optional, Tuple
@@ -26,6 +28,7 @@ PRIORITY_APPS = [
 ]
 
 HUD_PRESETS: Dict[str, str] = {
+    "fps-tiny": "fps",
     "fps-gpu": "fps,gputime,fpsgraph,frameintervalgraph",
     "minimal": "fps,gputime",
     "fps-only": "fps,fpsgraph",
@@ -56,17 +59,34 @@ CUSTOM_SHORTCUTS: Dict[str, Tuple[str, str]] = {
     "resolve": ("DaVinci Resolve", "com.blackmagic-design.DaVinciResolveiPad"),
 }
 
+METAL_HUD_LINE_RE = re.compile(r"metal-HUD:\s*(\d+),([0-9.]+),([0-9.]+)")
+SYSLOG_TIME_RE = re.compile(r"(\d{2}):(\d{2}):(\d{2})\.(\d{3,6})")
+
 
 def build_hud_env(
     preset: Optional[str],
     elements: Optional[str],
     align: Optional[str],
     scale: Optional[str],
+    stream_web: Optional[str] = None,
 ) -> Dict[str, str]:
     env: Dict[str, str] = {"MTL_HUD_ENABLED": "1"}
+    effective_preset = preset.lower().strip() if preset else None
     raw_elements: Optional[str] = elements
-    if raw_elements is None and preset:
-        raw_elements = HUD_PRESETS.get(preset.lower().strip())
+
+    if raw_elements is None and effective_preset:
+        raw_elements = HUD_PRESETS.get(effective_preset)
+
+    if stream_web:
+        env["MTL_HUD_LOG_ENABLED"] = "1"
+        if raw_elements is None and not effective_preset:
+            raw_elements = HUD_PRESETS["fps-tiny"]
+            if not scale:
+                scale = "0.14"
+
+    if effective_preset == "fps-tiny" and not scale:
+        scale = "0.14"
+
     if raw_elements:
         cleaned = ",".join(
             part for part in (p.strip().lower() for p in raw_elements.split(","))
@@ -119,6 +139,145 @@ def parse_json_payload(stdout: str) -> object:
         return json.loads(stdout[min(starts) :])
     except json.JSONDecodeError:
         return {}
+
+
+def find_idevicesyslog() -> Optional[str]:
+    for cand in (
+        shutil.which("idevicesyslog"),
+        "/opt/homebrew/bin/idevicesyslog",
+        "/usr/local/bin/idevicesyslog",
+    ):
+        if cand and os.path.isfile(cand) and os.access(cand, os.X_OK):
+            return cand
+    return None
+
+
+def parse_syslog_seconds(line: str) -> float:
+    m = SYSLOG_TIME_RE.search(line)
+    if not m:
+        return time.monotonic()
+    hh, mm, ss, frac = m.groups()
+    return int(hh) * 3600 + int(mm) * 60 + int(ss) + float("0." + frac)
+
+
+def post_metal_hud_sample(
+    endpoint_url: str,
+    fps: float,
+    frame_time_ms: float,
+    vram_mb: float,
+    ram_mb: float,
+    game_name: str,
+    bundle_id: str,
+) -> None:
+    payload = json.dumps(
+        {
+            "fps": fps,
+            "frameTimeMs": frame_time_ms,
+            "vramMB": vram_mb,
+            "ramMB": ram_mb,
+            "gameName": game_name,
+            "bundleId": bundle_id,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        endpoint_url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=2.0) as resp:
+            resp.read()
+    except Exception:
+        pass
+
+
+def stream_metal_hud_to_web(
+    udid: Optional[str],
+    app_name: str,
+    bundle_id: str,
+    stream_web_url: str,
+    max_seconds: Optional[float] = None,
+) -> None:
+    endpoint = stream_web_url.rstrip("/") + "/api/metal-hud"
+    syslog_bin = find_idevicesyslog() if platform.system() == "Darwin" else None
+
+    if syslog_bin:
+        cmd = [syslog_bin]
+        if udid:
+            cmd.extend(["-u", udid])
+    else:
+        cmd = [sys.executable, "-m", "pymobiledevice3", "syslog", "live"]
+        if udid:
+            cmd.extend(["--udid", udid])
+
+    print(f"[WEB] Transmitindo FPS + VRAM + RAM para {endpoint} (Ctrl+C para encerrar)")
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+    )
+
+    timer: Optional[threading.Timer] = None
+    if max_seconds and max_seconds > 0:
+        timer = threading.Timer(max_seconds, proc.terminate)
+        timer.daemon = True
+        timer.start()
+
+    prev_frame: Optional[int] = None
+    prev_ts: Optional[float] = None
+
+    try:
+        if proc.stdout is None:
+            return
+        for raw_line in proc.stdout:
+            if "metal-HUD:" not in raw_line:
+                continue
+            m = METAL_HUD_LINE_RE.search(raw_line)
+            if not m:
+                continue
+            frame_num = int(m.group(1))
+            vram_mb = float(m.group(2))
+            ram_mb = float(m.group(3))
+            ts = parse_syslog_seconds(raw_line)
+
+            if prev_frame is not None and prev_ts is not None:
+                dt = ts - prev_ts
+                if dt < -43200:
+                    dt += 86400
+                delta_frames = frame_num - prev_frame
+                if delta_frames > 0 and 0.2 <= dt <= 10.0:
+                    fps = min(240.0, round(delta_frames / dt, 1))
+                    frame_ms = round(1000.0 / fps, 2) if fps > 0 else 0.0
+                    print(
+                        f"[LIVE] {app_name}: {fps:.1f} FPS | {frame_ms:.1f} ms | VRAM {vram_mb:.1f} MB | RAM {ram_mb:.1f} MB",
+                        flush=True,
+                    )
+                    post_metal_hud_sample(
+                        endpoint,
+                        fps,
+                        frame_ms,
+                        vram_mb,
+                        ram_mb,
+                        app_name,
+                        bundle_id,
+                    )
+
+            prev_frame = frame_num
+            prev_ts = ts
+    except KeyboardInterrupt:
+        print("\n[WEB] Transmissao de FPS encerrada.")
+    finally:
+        if timer is not None:
+            timer.cancel()
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
 
 def has_devicectl() -> bool:
@@ -209,7 +368,14 @@ def devicectl_get_apps(device_id: str) -> List[dict]:
     return sorted(user_apps, key=lambda x: x.get("name", "").lower())
 
 
-def devicectl_launch(device_id: str, name: str, bundle_id: str, hud_env: Dict[str, str]) -> None:
+def devicectl_launch(
+    device_id: str,
+    name: str,
+    bundle_id: str,
+    hud_env: Dict[str, str],
+    stream_web: Optional[str] = None,
+    stream_seconds: Optional[float] = None,
+) -> None:
     print(f"\n[>>] Iniciando {name} ({bundle_id}) com Apple Metal HUD ({format_hud_summary(hud_env)})...")
     cmd = [
         "xcrun",
@@ -235,7 +401,9 @@ def devicectl_launch(device_id: str, name: str, bundle_id: str, hud_env: Dict[st
         print(output.strip())
         sys.exit(1)
     print(f"[OK] {name} iniciado com sucesso!")
-    print("[HUD] Apple Metal Performance HUD (FPS / GPU / Frame Time) ativo na tela.\n")
+    print("[HUD] Apple Metal Performance HUD ativo na tela.")
+    if stream_web:
+        stream_metal_hud_to_web(device_id, name, bundle_id, stream_web, stream_seconds)
 
 
 def ensure_pymobiledevice3() -> bool:
@@ -310,6 +478,8 @@ def pmd_launch_with_tunnel(
     bundle_id: str,
     cli_device: Optional[str],
     hud_env: Dict[str, str],
+    stream_web: Optional[str] = None,
+    stream_seconds: Optional[float] = None,
 ) -> None:
     print(f"\n[>>] Iniciando {name} ({bundle_id}) via pymobiledevice3 ({format_hud_summary(hud_env)})...")
 
@@ -335,6 +505,8 @@ def pmd_launch_with_tunnel(
             print((res.stdout + "\n" + res.stderr).strip())
             sys.exit(1)
         print(f"[OK] {name} iniciado com Apple Metal HUD!")
+        if stream_web:
+            stream_metal_hud_to_web(cli_device, name, bundle_id, stream_web, stream_seconds)
         return
 
     print("[USB] Abrindo túnel iOS 17+ (pode exigir terminal como Administrador no Windows)...")
@@ -422,7 +594,9 @@ def pmd_launch_with_tunnel(
 
         time.sleep(2.0)
         print(f"[OK] {name} iniciado com sucesso!")
-        print("[HUD] Apple Metal Performance HUD (FPS / GPU / Frame Time) ativo na tela.\n")
+        print("[HUD] Apple Metal Performance HUD ativo na tela.")
+        if stream_web:
+            stream_metal_hud_to_web(cli_device, name, bundle_id, stream_web, stream_seconds)
     finally:
         if proc.poll() is None:
             proc.terminate()
@@ -509,10 +683,12 @@ Opções:
   --device <UDID>        Força um UDID específico (ou defina METAL_HUD_DEVICE_ID)
   --list                 Lista todos os apps/jogos com Bundle IDs
   --bundle <BUNDLE_ID>   Inicia diretamente pelo Bundle ID
-  --preset <NOME>        Preset: fps-gpu, minimal, fps-only, full
+  --preset <NOME>        Preset: fps-tiny, fps-gpu, minimal, fps-only, full
   --elements <CSV>       Métricas MTL_HUD_ELEMENTS (ex: fps,gputime,fpsgraph,frameintervalgraph)
   --align <POS>          Posição: topleft, topright, topcenter, bottomleft, bottomright, ...
   --scale <0.0-1.0>      Tamanho do HUD (ex: 0.14, 0.18, 0.22)
+  --stream-web <URL>     Lê metal-HUD do syslog e envia FPS/VRAM/RAM ao servidor :8787
+  --stream-seconds <N>   Encerra transmissão automática após N segundos (opcional)
   --pause                Aguarda ENTER antes de fechar"""
     )
 
@@ -528,6 +704,8 @@ def main() -> None:
     cli_elements: Optional[str] = None
     cli_align: Optional[str] = None
     cli_scale: Optional[str] = None
+    cli_stream_web: Optional[str] = None
+    cli_stream_seconds: Optional[float] = None
     positional: Optional[str] = None
 
     argv = sys.argv[1:]
@@ -572,6 +750,22 @@ def main() -> None:
             i += 1
         elif arg.startswith("--scale="):
             cli_scale = arg.split("=", 1)[1].strip()
+        elif arg == "--stream-web" and i + 1 < len(argv):
+            cli_stream_web = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--stream-web="):
+            cli_stream_web = arg.split("=", 1)[1].strip()
+        elif arg == "--stream-seconds" and i + 1 < len(argv):
+            try:
+                cli_stream_seconds = float(argv[i + 1].strip())
+            except ValueError:
+                cli_stream_seconds = None
+            i += 1
+        elif arg.startswith("--stream-seconds="):
+            try:
+                cli_stream_seconds = float(arg.split("=", 1)[1].strip())
+            except ValueError:
+                cli_stream_seconds = None
         else:
             positional = arg.lower().strip()
         i += 1
@@ -582,7 +776,7 @@ def main() -> None:
         print_help()
         return
 
-    hud_env = build_hud_env(cli_preset, cli_elements, cli_align, cli_scale)
+    hud_env = build_hud_env(cli_preset, cli_elements, cli_align, cli_scale, cli_stream_web)
     env_device = os.environ.get("METAL_HUD_DEVICE_ID", "").strip()
     target_device = cli_device or env_device or None
 
@@ -615,11 +809,11 @@ def main() -> None:
         print(f"[ALVO] Alvo detectado: {label}")
 
         if cli_bundle:
-            devicectl_launch(target_device, cli_bundle, cli_bundle, hud_env)
+            devicectl_launch(target_device, cli_bundle, cli_bundle, hud_env, cli_stream_web, cli_stream_seconds)
             return
         if not list_apps and positional and positional in CUSTOM_SHORTCUTS:
             name, bundle_id = CUSTOM_SHORTCUTS[positional]
-            devicectl_launch(target_device, name, bundle_id, hud_env)
+            devicectl_launch(target_device, name, bundle_id, hud_env, cli_stream_web, cli_stream_seconds)
             return
 
         print("[...] Carregando lista de jogos e aplicativos instalados...")
@@ -636,7 +830,7 @@ def main() -> None:
         pick_and_launch(
             apps,
             positional,
-            lambda n, b: devicectl_launch(target_device, n, b, hud_env),
+            lambda n, b: devicectl_launch(target_device, n, b, hud_env, cli_stream_web, cli_stream_seconds),
         )
         return
 
@@ -646,11 +840,11 @@ def main() -> None:
         sys.exit(1)
 
     if cli_bundle:
-        pmd_launch_with_tunnel(cli_bundle, cli_bundle, target_device, hud_env)
+        pmd_launch_with_tunnel(cli_bundle, cli_bundle, target_device, hud_env, cli_stream_web, cli_stream_seconds)
         return
     if not list_apps and positional and positional in CUSTOM_SHORTCUTS:
         name, bundle_id = CUSTOM_SHORTCUTS[positional]
-        pmd_launch_with_tunnel(name, bundle_id, target_device, hud_env)
+        pmd_launch_with_tunnel(name, bundle_id, target_device, hud_env, cli_stream_web, cli_stream_seconds)
         return
 
     print("[...] Listando jogos e aplicativos instalados no dispositivo...")
@@ -666,7 +860,7 @@ def main() -> None:
     pick_and_launch(
         apps,
         positional,
-        lambda n, b: pmd_launch_with_tunnel(n, b, target_device, hud_env),
+        lambda n, b: pmd_launch_with_tunnel(n, b, target_device, hud_env, cli_stream_web, cli_stream_seconds),
     )
 
 

@@ -234,6 +234,14 @@ enum TelemetryWebDashboardHTML {
   </div>
 </section>
 
+<section class="card chart-card" id="fpsChartCard" style="display:none;margin-bottom:18px;">
+  <h2>
+    <span id="fpsChartTitle">Game FPS History (Avg / Min)</span>
+    <span id="fpsChartLegend" class="legend">Green: Avg FPS • Orange: Min FPS</span>
+  </h2>
+  <canvas id="fpsChart"></canvas>
+</section>
+
 <section class="card">
   <h2 id="incidentsTitle" style="margin:0 0 10px 0;font-size:14px;">Recent Network Incidents</h2>
   <table>
@@ -258,7 +266,8 @@ enum TelemetryWebDashboardHTML {
     Enable Apple's official real-time FPS / GPU / Frame Time overlay inside any game or app on your iPhone/iPad (works over Wi-Fi or USB on macOS; USB on Windows).
   </p>
   <div class="controls" style="margin-bottom:10px;">
-    <button type="button" class="active" data-hud-preset="fps-gpu" id="presetFpsGpuBtn">FPS + GPU + Graphs</button>
+    <button type="button" class="active" data-hud-preset="fps-tiny" id="presetFpsTinyBtn">Ultra Compact (FPS Only)</button>
+    <button type="button" data-hud-preset="fps-gpu" id="presetFpsGpuBtn">FPS + GPU + Graphs</button>
     <button type="button" data-hud-preset="minimal" id="presetMinimalBtn">Minimal (FPS + GPU)</button>
     <button type="button" data-hud-preset="full" id="presetFullBtn">Apple Full</button>
     <select id="hudAlignSelect" class="hud-sel" aria-label="HUD Position">
@@ -273,8 +282,8 @@ enum TelemetryWebDashboardHTML {
       <option value="centered">Center</option>
     </select>
     <select id="hudScaleSelect" class="hud-sel" aria-label="HUD Scale">
-      <option value="" selected>Size: Default</option>
-      <option value="0.14">Size: Compact (0.14)</option>
+      <option value="">Size: Default</option>
+      <option value="0.14" selected>Size: Compact (0.14)</option>
       <option value="0.18">Size: Small (0.18)</option>
       <option value="0.22">Size: Medium (0.22)</option>
       <option value="0.28">Size: Large (0.28)</option>
@@ -282,14 +291,20 @@ enum TelemetryWebDashboardHTML {
   </div>
   <div class="hud-checks" role="group" aria-label="Metal HUD Metrics">
     <label class="hud-chk"><input type="checkbox" data-hud-el="fps" checked> FPS</label>
-    <label class="hud-chk"><input type="checkbox" data-hud-el="gputime" checked> GPU ms</label>
-    <label class="hud-chk"><input type="checkbox" data-hud-el="fpsgraph" checked> FPS Graph</label>
-    <label class="hud-chk"><input type="checkbox" data-hud-el="frameintervalgraph" checked> Frame Graph</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="gputime"> GPU ms</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="fpsgraph"> FPS Graph</label>
+    <label class="hud-chk"><input type="checkbox" data-hud-el="frameintervalgraph"> Frame Graph</label>
     <label class="hud-chk"><input type="checkbox" data-hud-el="gputimeline"> GPU Timeline</label>
     <label class="hud-chk"><input type="checkbox" data-hud-el="memory"> RAM</label>
     <label class="hud-chk"><input type="checkbox" data-hud-el="thermal"> Thermal</label>
     <label class="hud-chk"><input type="checkbox" data-hud-el="shaders"> Shaders</label>
     <label class="hud-chk"><input type="checkbox" data-hud-el="device"> GPU Name</label>
+  </div>
+  <div class="hud-checks">
+    <label class="hud-chk" style="border-color:rgba(52,211,153,0.4);color:var(--green);">
+      <input type="checkbox" id="hudStreamWebToggle" checked>
+      <span id="hudStreamWebLabel">Stream FPS to Web Monitor + 24h Log</span>
+    </label>
   </div>
   <div class="controls" style="margin-bottom:10px;">
     <button id="copyMacCmdBtn" type="button" style="border-color:var(--accent);color:var(--accent);">Copy Mac Command (1-Click)</button>
@@ -311,9 +326,18 @@ const I18N = {
     downloadCSV: "Download CSV",
     metalHudTitle: "Apple Metal FPS HUD Launcher (Mac & Windows)",
     metalHudDesc: "Enable Apple's official real-time FPS / GPU / Frame Time overlay inside any game or app on your iPhone/iPad (works over Wi-Fi or USB on macOS; USB on Windows).",
+    presetFpsTiny: "Ultra Compact (FPS Only)",
     presetFpsGpu: "FPS + GPU + Graphs",
     presetMinimal: "Minimal (FPS + GPU)",
     presetFull: "Apple Full",
+    streamWebLabel: "Stream FPS to Web Monitor + 24h Log",
+    gameFPS: "Game FPS",
+    gameVRAMRAM: "Game VRAM / RAM",
+    fpsChartTitle: "Game FPS History (Avg / Min)",
+    fpsChartLegend: "Green: Avg FPS • Orange: Min FPS",
+    avgLabel: "Avg",
+    minLabel: "Min",
+    maxLabel: "Max",
     copyMacCmd: "Copy Mac Command (1-Click)",
     copiedMacCmd: "Copied! Paste in Terminal",
     dlWinBtn: "Windows (.bat)",
@@ -372,9 +396,18 @@ const I18N = {
     downloadCSV: "Baixar CSV",
     metalHudTitle: "Launcher Apple Metal FPS HUD (Mac e Windows)",
     metalHudDesc: "Ative o contador oficial da Apple (FPS / GPU / Frame Time) dentro de qualquer jogo ou app no iPhone/iPad (funciona via Wi-Fi ou USB no macOS; USB no Windows).",
+    presetFpsTiny: "Ultra Compacto (Só FPS)",
     presetFpsGpu: "FPS + GPU + Gráficos",
     presetMinimal: "Mínimo (FPS + GPU)",
     presetFull: "Completo Apple",
+    streamWebLabel: "Enviar FPS ao Painel Web + Log 24h",
+    gameFPS: "FPS do Jogo",
+    gameVRAMRAM: "VRAM / RAM do Jogo",
+    fpsChartTitle: "Histórico de FPS do Jogo (Média / Mín)",
+    fpsChartLegend: "Verde: FPS Médio • Laranja: FPS Mínimo",
+    avgLabel: "Méd",
+    minLabel: "Mín",
+    maxLabel: "Máx",
     copyMacCmd: "Copiar Comando Mac (1 Clique)",
     copiedMacCmd: "Copiado! Cole no Terminal",
     dlWinBtn: "Windows (.bat)",
@@ -425,9 +458,18 @@ const I18N = {
     downloadCSV: "Descargar CSV",
     metalHudTitle: "Launcher Apple Metal FPS HUD (Mac y Windows)",
     metalHudDesc: "Activa el contador oficial de Apple (FPS / GPU / Frame Time) dentro de cualquier juego o app en tu iPhone/iPad (funciona por Wi-Fi o USB en macOS; USB en Windows).",
+    presetFpsTiny: "Ultra Compacto (Solo FPS)",
     presetFpsGpu: "FPS + GPU + Gráficos",
     presetMinimal: "Mínimo (FPS + GPU)",
     presetFull: "Completo Apple",
+    streamWebLabel: "Enviar FPS al Monitor Web + Log 24h",
+    gameFPS: "FPS del Juego",
+    gameVRAMRAM: "VRAM / RAM del Juego",
+    fpsChartTitle: "Historial de FPS del Juego (Prom / Mín)",
+    fpsChartLegend: "Verde: FPS Prom • Naranja: FPS Mín",
+    avgLabel: "Prom",
+    minLabel: "Mín",
+    maxLabel: "Máx",
     copyMacCmd: "Copiar Comando Mac (1 Clic)",
     copiedMacCmd: "¡Copiado! Pega en Terminal",
     dlWinBtn: "Windows (.bat)",
@@ -499,6 +541,7 @@ let lastIncidents = null;
 function t() { return I18N[currentLang] || I18N["en"]; }
 
 const HUD_PRESET_MAP = {
+  "fps-tiny": ["fps"],
   "fps-gpu": ["fps", "gputime", "fpsgraph", "frameintervalgraph"],
   "minimal": ["fps", "gputime"],
   "full": []
@@ -509,10 +552,12 @@ function getSelectedHudParams() {
     .map(cb => cb.dataset.hudEl);
   const alignEl = document.getElementById("hudAlignSelect");
   const scaleEl = document.getElementById("hudScaleSelect");
+  const streamEl = document.getElementById("hudStreamWebToggle");
   return {
     elements: els.join(","),
     align: alignEl ? alignEl.value : "",
-    scale: scaleEl ? scaleEl.value : ""
+    scale: scaleEl ? scaleEl.value : "",
+    streamWeb: Boolean(streamEl && streamEl.checked)
   };
 }
 
@@ -522,6 +567,7 @@ function getMacLaunchCommand() {
   if (p.elements) cmd += " --elements " + p.elements;
   if (p.align) cmd += " --align " + p.align;
   if (p.scale) cmd += " --scale " + p.scale;
+  if (p.streamWeb) cmd += " --stream-web " + window.location.origin;
   return cmd;
 }
 
@@ -532,6 +578,7 @@ function updateMetalHUDControls() {
   if (p.elements) qp.set("elements", p.elements);
   if (p.align) qp.set("align", p.align);
   if (p.scale) qp.set("scale", p.scale);
+  if (p.streamWeb) qp.set("streamWeb", "1");
   const qs = qp.toString();
   document.getElementById("dlWinBtn").href = "/download/metal-hud-windows.bat" + (qs ? "?" + qs : "");
 }
@@ -554,9 +601,11 @@ function applyStaticTranslations() {
   document.getElementById("csvLink").textContent = s.downloadCSV;
   document.getElementById("metalHudTitle").textContent = s.metalHudTitle;
   document.getElementById("metalHudDesc").textContent = s.metalHudDesc;
+  document.getElementById("presetFpsTinyBtn").textContent = s.presetFpsTiny;
   document.getElementById("presetFpsGpuBtn").textContent = s.presetFpsGpu;
   document.getElementById("presetMinimalBtn").textContent = s.presetMinimal;
   document.getElementById("presetFullBtn").textContent = s.presetFull;
+  document.getElementById("hudStreamWebLabel").textContent = s.streamWebLabel;
   document.getElementById("copyMacCmdBtn").textContent = s.copyMacCmd;
   updateMetalHUDControls();
   document.getElementById("dlWinBtn").textContent = s.dlWinBtn;
@@ -610,6 +659,10 @@ function renderKPIs(d) {
   const thm = (s.thermalStates && s.thermalStates[d.thermalState]) || d.thermalState || "--";
 
   const cards = [
+    ...(d.gameFPS != null ? [
+      [s.gameFPS, fmt(d.gameFPS, 1) + " FPS", (d.gameName || "Metal") + " • " + fmt(d.gameFrameTimeMs, 1) + " ms", d.gameFPS >= 55 ? "var(--green)" : (d.gameFPS >= 30 ? "var(--yellow)" : "var(--red)")],
+      [s.gameVRAMRAM, fmt(d.gameVRAMMB, 1) + " MB", "RAM: " + fmt0(d.gameRAMMB) + " MB", "var(--accent)"]
+    ] : []),
     ["CPU Die", cpuT != null ? fmt(cpuT, 1) + "°C" : "--", d.cpuSensorName || s.cpuSilicon, tempColor(cpuT)],
     ...(d.gpuTemperature != null ? [["GPU Die", fmt(d.gpuTemperature, 1) + "°C", d.gpuSensorName || s.gpuSilicon, tempColor(d.gpuTemperature)]] : []),
     [s.cpuLoad, fmt0(d.cpuTotalPercent) + "%", d.topology ? d.topology.totalCores + " " + s.cores : "CPU", d.cpuTotalPercent >= 85 ? "var(--red)" : "var(--accent)"],
@@ -701,6 +754,7 @@ function drawChart(canvasId, seriesList, buckets, dropField) {
 }
 
 function renderAllCharts(buckets) {
+  const s = t();
   drawChart("hwChart", [
     { key: "maxCPUTemp", color: "#38bdf8" },
     { key: "maxGPUTemp", color: "#fb923c" },
@@ -711,6 +765,28 @@ function renderAllCharts(buckets) {
     { key: "maxUDPMs", color: "#fb923c" },
     { key: "maxGatewayMs", color: "#34d399" }
   ], buckets, "dropCount");
+
+  const fpsCard = document.getElementById("fpsChartCard");
+  const fpsValues = (buckets || []).map(b => b.avgGameFPS).filter(v => v != null && isFinite(v));
+  const minValues = (buckets || []).map(b => b.minGameFPS).filter(v => v != null && isFinite(v));
+  const hasGameFPS = fpsValues.length > 0 || (lastSnapshot && lastSnapshot.gameFPS != null);
+  fpsCard.style.display = hasGameFPS ? "block" : "none";
+  if (hasGameFPS) {
+    document.getElementById("fpsChartTitle").textContent = s.fpsChartTitle;
+    if (fpsValues.length > 0) {
+      const avgFPS = fpsValues.reduce((a, b) => a + b, 0) / fpsValues.length;
+      const minFPS = minValues.length > 0 ? Math.min(...minValues) : Math.min(...fpsValues);
+      const maxFPS = Math.max(...fpsValues);
+      document.getElementById("fpsChartLegend").textContent =
+        `${s.fpsChartLegend} • ${s.avgLabel} ${fmt(avgFPS, 1)} / ${s.minLabel} ${fmt(minFPS, 1)} / ${s.maxLabel} ${fmt(maxFPS, 1)} FPS`;
+    } else {
+      document.getElementById("fpsChartLegend").textContent = s.fpsChartLegend;
+    }
+    drawChart("fpsChart", [
+      { key: "avgGameFPS", color: "#34d399" },
+      { key: "minGameFPS", color: "#fb923c" }
+    ], buckets, null);
+  }
 }
 
 function renderIncidents(events) {
@@ -807,10 +883,15 @@ document.getElementById("copyMacCmdBtn").addEventListener("click", async () => {
 
 document.querySelectorAll("button[data-hud-preset]").forEach(btn => {
   btn.addEventListener("click", () => {
-    const allowed = new Set(HUD_PRESET_MAP[btn.dataset.hudPreset] || []);
+    const presetName = btn.dataset.hudPreset;
+    const allowed = new Set(HUD_PRESET_MAP[presetName] || []);
     document.querySelectorAll("input[data-hud-el]").forEach(cb => {
       cb.checked = allowed.has(cb.dataset.hudEl);
     });
+    const scaleSel = document.getElementById("hudScaleSelect");
+    if (scaleSel) {
+      scaleSel.value = presetName === "fps-tiny" ? "0.14" : "";
+    }
     syncHudPresetButtons();
     updateMetalHUDControls();
   });
@@ -823,6 +904,7 @@ document.querySelectorAll("input[data-hud-el]").forEach(cb => {
   });
 });
 
+document.getElementById("hudStreamWebToggle").addEventListener("change", updateMetalHUDControls);
 document.getElementById("hudAlignSelect").addEventListener("change", updateMetalHUDControls);
 document.getElementById("hudScaleSelect").addEventListener("change", updateMetalHUDControls);
 

@@ -167,6 +167,13 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
     // MARK: - Real-Time Network Quality & Packet Loss SLA
     let network: NetworkQualityMetrics
 
+    // MARK: - Bridged Game FPS & Memory (Metal HUD Bridge)
+    let gameFPS: Double?
+    let gameFrameTimeMs: Double?
+    let gameVRAMMB: Double?
+    let gameRAMMB: Double?
+    let gameName: String?
+
     var memoryUsedPercent: Double {
         guard memoryTotalBytes > 0 else { return 0 }
         return min(100, max(0, (Double(memoryUsedBytes) / Double(memoryTotalBytes)) * 100.0))
@@ -207,6 +214,7 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
         async let thermalStateTask = sensors.getThermalState()
         async let slowTask = SlowSnapshotMetricsCache.shared.get(using: sensors)
         async let networkTask = sensors.getNetworkQualityMetrics()
+        async let metalHUDTask = ExternalMetalHUDStore.shared.current()
 
         let thermals = await thermalTask
         let voltages = await voltageTask
@@ -216,6 +224,7 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
         let thermalState = await thermalStateTask
         let (disk, uptime, vmMetrics, threadSummary) = await slowTask
         let network = await networkTask
+        let metalHUD = await metalHUDTask
 
         let (batteryPercent, isCharging) = await MainActor.run { () -> (Int?, Bool) in
             UIDevice.current.isBatteryMonitoringEnabled = true
@@ -239,7 +248,8 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
             isCharging: isCharging,
             vmMetrics: vmMetrics,
             threadSummary: threadSummary,
-            network: network
+            network: network,
+            metalHUD: metalHUD
         )
     }
 
@@ -272,7 +282,8 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
             totalWaitStateTime: 0,
             isMainThreadStarved: false
         ),
-        network: NetworkQualityMetrics = .placeholder
+        network: NetworkQualityMetrics = .placeholder,
+        metalHUD: ExternalMetalHUDMetrics? = nil
     ) -> TelemetrySnapshot {
         // Filter sane physical sensor readings (°C)
         let validThermals = thermals
@@ -366,7 +377,58 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
             jetsamLimitRemainingMB: vmMetrics.jetsamLimitRemainingMB,
             activeThreadsCount: threadSummary.totalThreads,
             isJetsamRisk: vmMetrics.isJetsamRisk,
-            network: network
+            network: network,
+            gameFPS: metalHUD?.fps,
+            gameFrameTimeMs: metalHUD?.frameTimeMs,
+            gameVRAMMB: metalHUD?.vramMB,
+            gameRAMMB: metalHUD?.ramMB,
+            gameName: metalHUD?.gameName
+        )
+    }
+
+    func with(metalHUD: ExternalMetalHUDMetrics?) -> TelemetrySnapshot {
+        TelemetrySnapshot(
+            timestamp: self.timestamp,
+            peakTemperature: self.peakTemperature,
+            peakSensorName: self.peakSensorName,
+            cpuTemperature: self.cpuTemperature,
+            cpuSensorName: self.cpuSensorName,
+            averageTemperature: self.averageTemperature,
+            batteryTemperature: self.batteryTemperature,
+            gpuTemperature: self.gpuTemperature,
+            gpuSensorName: self.gpuSensorName,
+            topThermalSensors: self.topThermalSensors,
+            thermalState: self.thermalState,
+            cpuTotalPercent: self.cpuTotalPercent,
+            cpuUserPercent: self.cpuUserPercent,
+            cpuSystemPercent: self.cpuSystemPercent,
+            topology: self.topology,
+            memoryUsedBytes: self.memoryUsedBytes,
+            memoryTotalBytes: self.memoryTotalBytes,
+            memoryFreeBytes: self.memoryFreeBytes,
+            memoryActiveBytes: self.memoryActiveBytes,
+            memoryWiredBytes: self.memoryWiredBytes,
+            memoryCompressedBytes: self.memoryCompressedBytes,
+            memoryAppAvailableBytes: self.memoryAppAvailableBytes,
+            diskUsedBytes: self.diskUsedBytes,
+            diskTotalBytes: self.diskTotalBytes,
+            diskFreeBytes: self.diskFreeBytes,
+            batteryPercent: self.batteryPercent,
+            isCharging: self.isCharging,
+            peakVoltage: self.peakVoltage,
+            totalCurrent: self.totalCurrent,
+            estimatedWatts: self.estimatedWatts,
+            uptimeText: self.uptimeText,
+            dirtyRatio: self.dirtyRatio,
+            jetsamLimitRemainingMB: self.jetsamLimitRemainingMB,
+            activeThreadsCount: self.activeThreadsCount,
+            isJetsamRisk: self.isJetsamRisk,
+            network: self.network,
+            gameFPS: metalHUD?.fps,
+            gameFrameTimeMs: metalHUD?.frameTimeMs,
+            gameVRAMMB: metalHUD?.vramMB,
+            gameRAMMB: metalHUD?.ramMB,
+            gameName: metalHUD?.gameName
         )
     }
 
@@ -418,6 +480,11 @@ struct TelemetrySnapshot: Codable, Sendable, Equatable {
         jetsamLimitRemainingMB: 850.0,
         activeThreadsCount: 8,
         isJetsamRisk: false,
-        network: .placeholder
+        network: .placeholder,
+        gameFPS: nil,
+        gameFrameTimeMs: nil,
+        gameVRAMMB: nil,
+        gameRAMMB: nil,
+        gameName: nil
     )
 }

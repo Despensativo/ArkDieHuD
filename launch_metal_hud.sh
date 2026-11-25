@@ -9,8 +9,13 @@ Detecta automaticamente o iPad pareado via `xcrun devicectl` ou aceita
 
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
+import threading
+import time
+import urllib.request
 
 
 PRIORITY_APPS = [
@@ -20,11 +25,15 @@ PRIORITY_APPS = [
 ]
 
 HUD_PRESETS = {
+    "fps-tiny": "fps",
     "fps-gpu": "fps,gputime,fpsgraph,frameintervalgraph",
     "minimal": "fps,gputime",
     "fps-only": "fps,fpsgraph",
     "full": "",
 }
+
+METAL_HUD_LINE_RE = re.compile(r"metal-HUD:\s*(\d+),([0-9.]+),([0-9.]+)")
+SYSLOG_TIME_RE = re.compile(r"(\d{2}):(\d{2}):(\d{2})\.(\d{3,6})")
 
 VALID_ALIGNMENTS = {
     "topleft",
@@ -162,11 +171,25 @@ def build_hud_env(
     elements: str | None,
     align: str | None,
     scale: str | None,
+    stream_web: str | None = None,
 ) -> dict[str, str]:
     env: dict[str, str] = {"MTL_HUD_ENABLED": "1"}
+    effective_preset = preset.lower().strip() if preset else None
     raw_elements = elements
-    if raw_elements is None and preset:
-        raw_elements = HUD_PRESETS.get(preset.lower().strip())
+
+    if raw_elements is None and effective_preset:
+        raw_elements = HUD_PRESETS.get(effective_preset)
+
+    if stream_web:
+        env["MTL_HUD_LOG_ENABLED"] = "1"
+        if raw_elements is None and not effective_preset:
+            raw_elements = HUD_PRESETS["fps-tiny"]
+            if not scale:
+                scale = "0.14"
+
+    if effective_preset == "fps-tiny" and not scale:
+        scale = "0.14"
+
     if raw_elements:
         cleaned = ",".join(
             part for part in (p.strip().lower() for p in raw_elements.split(","))
@@ -195,7 +218,138 @@ def format_hud_summary(hud_env: dict[str, str]) -> str:
     return " | ".join(parts) if parts else "padrão completo Apple"
 
 
-def launch_app(device_id: str, name: str, bundle_id: str, hud_env: dict[str, str]) -> None:
+def find_idevicesyslog() -> str | None:
+    for cand in (
+        shutil.which("idevicesyslog"),
+        "/opt/homebrew/bin/idevicesyslog",
+        "/usr/local/bin/idevicesyslog",
+    ):
+        if cand and os.path.isfile(cand) and os.access(cand, os.X_OK):
+            return cand
+    return None
+
+
+def parse_syslog_seconds(line: str) -> float:
+    m = SYSLOG_TIME_RE.search(line)
+    if not m:
+        return time.monotonic()
+    hh, mm, ss, frac = m.groups()
+    return int(hh) * 3600 + int(mm) * 60 + int(ss) + float("0." + frac)
+
+
+def post_metal_hud_sample(
+    endpoint_url: str,
+    fps: float,
+    frame_time_ms: float,
+    vram_mb: float,
+    ram_mb: float,
+    game_name: str,
+    bundle_id: str,
+) -> None:
+    payload = json.dumps(
+        {
+            "fps": fps,
+            "frameTimeMs": frame_time_ms,
+            "vramMB": vram_mb,
+            "ramMB": ram_mb,
+            "gameName": game_name,
+            "bundleId": bundle_id,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        endpoint_url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=2.0) as resp:
+            resp.read()
+    except Exception:
+        pass
+
+
+def stream_metal_hud_to_web(
+    udid: str,
+    app_name: str,
+    bundle_id: str,
+    stream_web_url: str,
+    max_seconds: float | None = None,
+) -> None:
+    endpoint = stream_web_url.rstrip("/") + "/api/metal-hud"
+    syslog_bin = find_idevicesyslog()
+    if syslog_bin:
+        cmd = [syslog_bin, "-u", udid]
+    else:
+        cmd = [sys.executable, "-m", "pymobiledevice3", "syslog", "live", "--udid", udid]
+
+    print(f"📡 Transmitindo FPS + VRAM + RAM para {endpoint} (Ctrl+C para encerrar)")
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+    )
+    timer = None
+    if max_seconds and max_seconds > 0:
+        timer = threading.Timer(max_seconds, proc.terminate)
+        timer.daemon = True
+        timer.start()
+
+    prev_frame: int | None = None
+    prev_ts: float | None = None
+    try:
+        if proc.stdout is None:
+            return
+        for raw_line in proc.stdout:
+            if "metal-HUD:" not in raw_line:
+                continue
+            m = METAL_HUD_LINE_RE.search(raw_line)
+            if not m:
+                continue
+            frame_num = int(m.group(1))
+            vram_mb = float(m.group(2))
+            ram_mb = float(m.group(3))
+            ts = parse_syslog_seconds(raw_line)
+
+            if prev_frame is not None and prev_ts is not None:
+                dt = ts - prev_ts
+                if dt < -43200:
+                    dt += 86400
+                delta_frames = frame_num - prev_frame
+                if delta_frames > 0 and 0.2 <= dt <= 10.0:
+                    fps = min(240.0, round(delta_frames / dt, 1))
+                    frame_ms = round(1000.0 / fps, 2) if fps > 0 else 0.0
+                    print(
+                        f"  🎮 {app_name}: {fps:.1f} FPS | {frame_ms:.1f} ms | VRAM {vram_mb:.1f} MB | RAM {ram_mb:.1f} MB",
+                        flush=True,
+                    )
+                    post_metal_hud_sample(endpoint, fps, frame_ms, vram_mb, ram_mb, app_name, bundle_id)
+
+            prev_frame = frame_num
+            prev_ts = ts
+    except KeyboardInterrupt:
+        print("\n⏹️ Transmissão encerrada.")
+    finally:
+        if timer is not None:
+            timer.cancel()
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def launch_app(
+    device_id: str,
+    name: str,
+    bundle_id: str,
+    hud_env: dict[str, str],
+    stream_web: str | None = None,
+    stream_seconds: float | None = None,
+) -> None:
     print(f"\n🚀 Iniciando {name} ({bundle_id}) com o Apple Metal HUD ({format_hud_summary(hud_env)})...")
     cmd = [
         "xcrun",
@@ -222,7 +376,9 @@ def launch_app(device_id: str, name: str, bundle_id: str, hud_env: dict[str, str
         sys.exit(1)
     else:
         print(f"✅ {name} iniciado com sucesso no dispositivo!")
-        print("📊 O Metal Performance HUD oficial da Apple (FPS / GPU / Frame Time) já está ativo na tela!\n")
+        print("📊 O Metal Performance HUD oficial da Apple já está ativo na tela!\n")
+        if stream_web:
+            stream_metal_hud_to_web(device_id, name, bundle_id, stream_web, stream_seconds)
 
 
 def print_help() -> None:
@@ -235,10 +391,12 @@ Opções:
   --device <UDID>        Força o lançamento em um UDID específico (ou defina METAL_HUD_DEVICE_ID)
   --list                 Lista todos os apps/jogos instalados no iPad com seus Bundle IDs exatos
   --bundle <BUNDLE_ID>   Inicia diretamente qualquer app pelo Bundle ID (ex: com.miHoYo.GenshinImpact)
-  --preset <NOME>        Preset: fps-gpu, minimal, fps-only, full
+  --preset <NOME>        Preset: fps-tiny, fps-gpu, minimal, fps-only, full
   --elements <CSV>       Métricas MTL_HUD_ELEMENTS (ex: fps,gputime,fpsgraph,frameintervalgraph)
   --align <POS>          Posição: topleft, topright, topcenter, bottomleft, bottomright, ...
   --scale <0.0-1.0>      Tamanho do HUD (ex: 0.14, 0.18, 0.22)
+  --stream-web <URL>     Lê metal-HUD do syslog e envia FPS/VRAM/RAM ao servidor :8787
+  --stream-seconds <N>   Encerra transmissão após N segundos (opcional)
 
 Atalhos rápidos e busca:
   flash | fit            PUBGM FLASH (com.tencent.igfit)
@@ -269,7 +427,7 @@ def print_devices() -> None:
         )
 
 
-def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | None, str | None, str | None, str | None, str | None, str | None, float | None, str | None]:
     show_help = False
     show_devices = False
     list_apps = False
@@ -279,6 +437,8 @@ def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | Non
     cli_elements = None
     cli_align = None
     cli_scale = None
+    cli_stream_web = None
+    cli_stream_seconds = None
     positional = None
 
     i = 0
@@ -326,15 +486,31 @@ def parse_args(argv: list[str]) -> tuple[bool, bool, bool, str | None, str | Non
             i += 1
         elif arg.startswith("--scale="):
             cli_scale = arg.split("=", 1)[1].strip()
+        elif arg == "--stream-web" and i + 1 < len(argv):
+            cli_stream_web = argv[i + 1].strip()
+            i += 1
+        elif arg.startswith("--stream-web="):
+            cli_stream_web = arg.split("=", 1)[1].strip()
+        elif arg == "--stream-seconds" and i + 1 < len(argv):
+            try:
+                cli_stream_seconds = float(argv[i + 1].strip())
+            except ValueError:
+                cli_stream_seconds = None
+            i += 1
+        elif arg.startswith("--stream-seconds="):
+            try:
+                cli_stream_seconds = float(arg.split("=", 1)[1].strip())
+            except ValueError:
+                cli_stream_seconds = None
         else:
             positional = arg.lower().strip()
         i += 1
 
-    return show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, positional
+    return show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, cli_stream_web, cli_stream_seconds, positional
 
 
 def main() -> None:
-    show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, arg = parse_args(sys.argv[1:])
+    show_help, show_devices, list_apps, cli_device, cli_bundle, cli_preset, cli_elements, cli_align, cli_scale, cli_stream_web, cli_stream_seconds, arg = parse_args(sys.argv[1:])
 
     if show_help:
         print_help()
@@ -344,17 +520,17 @@ def main() -> None:
         print_devices()
         return
 
-    hud_env = build_hud_env(cli_preset, cli_elements, cli_align, cli_scale)
+    hud_env = build_hud_env(cli_preset, cli_elements, cli_align, cli_scale, cli_stream_web)
     device_id, device_label = resolve_device_id(cli_device)
     print(f"🎯 Alvo detectado: {device_label}")
 
     if cli_bundle:
-        launch_app(device_id, cli_bundle, cli_bundle, hud_env)
+        launch_app(device_id, cli_bundle, cli_bundle, hud_env, cli_stream_web, cli_stream_seconds)
         return
 
     if not list_apps and arg and arg in CUSTOM_SHORTCUTS:
         name, bundle_id = CUSTOM_SHORTCUTS[arg]
-        launch_app(device_id, name, bundle_id, hud_env)
+        launch_app(device_id, name, bundle_id, hud_env, cli_stream_web, cli_stream_seconds)
         return
 
     print("🔍 Carregando lista de jogos e aplicativos instalados...")
@@ -396,6 +572,9 @@ def main() -> None:
                 device_id,
                 exact_bundle.get("name", arg),
                 exact_bundle.get("bundleIdentifier", arg),
+                hud_env,
+                cli_stream_web,
+                cli_stream_seconds,
             )
             return
         matched = [
@@ -405,7 +584,14 @@ def main() -> None:
         ]
         if matched:
             target = matched[0]
-            launch_app(device_id, target.get("name", arg), target.get("bundleIdentifier", ""))
+            launch_app(
+                device_id,
+                target.get("name", arg),
+                target.get("bundleIdentifier", ""),
+                hud_env,
+                cli_stream_web,
+                cli_stream_seconds,
+            )
             return
         print(f"⚠️  Nenhum aplicativo correspondente a '{arg}'. Exibindo lista completa:")
 
@@ -437,7 +623,14 @@ def main() -> None:
             return
 
     target = all_apps[idx]
-    launch_app(device_id, target.get("name", "App"), target.get("bundleIdentifier", ""))
+    launch_app(
+        device_id,
+        target.get("name", "App"),
+        target.get("bundleIdentifier", ""),
+        hud_env,
+        cli_stream_web,
+        cli_stream_seconds,
+    )
 
 
 if __name__ == "__main__":

@@ -54,7 +54,7 @@
           "date": "2026-11-25",
           "localizedDescription": "Initial v1.0.0 release: trilingual auto-detection (EN/PT-BR/ES), persistent IOHID optimization (~3% single-core CPU, ~37 MiB RAM), Dual-Probe ICMP/UDP/TCP, 24h SQLite WAL logs, and PC/Mac web dashboard (:8787).",
           "downloadURL": "https://github.com/Despensativo/ArkDieHuD/releases/download/v1.0.0/ArkDieHuD-unsigned.ipa",
-          "size": 3646995,
+          "size": 3666757,
           "minOSVersion": "17.0"
         }
       ],

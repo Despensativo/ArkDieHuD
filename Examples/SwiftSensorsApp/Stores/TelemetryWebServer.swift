@@ -2,6 +2,15 @@ import Foundation
 import Network
 import SwiftSensors
 
+private struct MetalHUDIngestPayload: Decodable {
+    let fps: Double
+    let frameTimeMs: Double?
+    let vramMB: Double?
+    let ramMB: Double?
+    let gameName: String?
+    let bundleId: String?
+}
+
 /// Lightweight local HTTP/1.1 telemetry server over LAN Wi-Fi or USB (`iproxy 8787 8787`),
 /// letting users monitor live graphs and metrics on PC/Mac without showing the PiP overlay on the iPad.
 actor TelemetryWebServer {
@@ -108,18 +117,36 @@ actor TelemetryWebServer {
 
     private nonisolated static func acceptConnection(_ connection: NWConnection, queue: DispatchQueue) {
         connection.start(queue: queue)
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { data, _, _, error in
-            guard error == nil, let data, let requestText = String(data: data, encoding: .utf8) else {
+        Self.receiveFullHTTPRequest(connection, buffer: Data())
+    }
+
+    private nonisolated static func receiveFullHTTPRequest(_ connection: NWConnection, buffer: Data) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { data, _, isComplete, error in
+            guard error == nil else {
+                connection.cancel()
+                return
+            }
+            var accumulated = buffer
+            if let data {
+                accumulated.append(data)
+            }
+            guard !accumulated.isEmpty else {
                 connection.cancel()
                 return
             }
 
-            let targetPath = Self.extractRequestTarget(from: requestText)
-            let requestHost = Self.extractRequestHost(from: requestText)
+            if !isComplete, !Self.isHTTPRequestComplete(accumulated), accumulated.count < 65_536 {
+                Self.receiveFullHTTPRequest(connection, buffer: accumulated)
+                return
+            }
+
+            let parsed = Self.parseHTTPRequest(from: accumulated)
             Task {
                 let responseBytes = await TelemetryWebServer.shared.buildHTTPResponse(
-                    forTarget: targetPath,
-                    hostHeader: requestHost
+                    method: parsed.method,
+                    forTarget: parsed.target,
+                    hostHeader: parsed.hostHeader,
+                    body: parsed.body
                 )
                 connection.send(content: responseBytes, completion: .contentProcessed { _ in
                     connection.cancel()
@@ -128,14 +155,47 @@ actor TelemetryWebServer {
         }
     }
 
-    private nonisolated static func extractRequestTarget(from request: String) -> String {
-        guard let firstLine = request.split(separator: "\r\n", maxSplits: 1).first
-            ?? request.split(separator: "\n", maxSplits: 1).first else {
-            return "/"
+    private nonisolated static func isHTTPRequestComplete(_ data: Data) -> Bool {
+        let crlfSep = Data("\r\n\r\n".utf8)
+        let lfSep = Data("\n\n".utf8)
+        let sepRange = data.range(of: crlfSep) ?? data.range(of: lfSep)
+        guard let sepRange else { return false }
+        let headerData = data[..<sepRange.lowerBound]
+        guard let headerText = String(data: headerData, encoding: .utf8) else { return true }
+        let contentLength = Self.extractContentLength(from: headerText)
+        let bodyCount = data.count - sepRange.upperBound
+        return bodyCount >= contentLength
+    }
+
+    private nonisolated static func extractContentLength(from headerText: String) -> Int {
+        for rawLine in headerText.split(whereSeparator: \.isNewline) {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            if line.lowercased().hasPrefix("content-length:") {
+                let value = line.dropFirst(15).trimmingCharacters(in: .whitespacesAndNewlines)
+                return max(0, Int(value) ?? 0)
+            }
         }
+        return 0
+    }
+
+    private nonisolated static func parseHTTPRequest(
+        from data: Data
+    ) -> (method: String, target: String, hostHeader: String?, body: Data) {
+        let crlfSep = Data("\r\n\r\n".utf8)
+        let lfSep = Data("\n\n".utf8)
+        let sepRange = data.range(of: crlfSep) ?? data.range(of: lfSep)
+        let headerData = sepRange.map { Data(data[..<$0.lowerBound]) } ?? data
+        let bodyData = sepRange.map { Data(data[$0.upperBound...]) } ?? Data()
+        let headerText = String(data: headerData, encoding: .utf8) ?? ""
+
+        let firstLine = headerText.split(separator: "\r\n", maxSplits: 1).first
+            ?? headerText.split(separator: "\n", maxSplits: 1).first
+            ?? ""
         let parts = firstLine.split(separator: " ")
-        guard parts.count >= 2 else { return "/" }
-        return String(parts[1])
+        let method = parts.first.map { String($0).uppercased() } ?? "GET"
+        let target = parts.count >= 2 ? String(parts[1]) : "/"
+        let hostHeader = Self.extractRequestHost(from: headerText)
+        return (method, target, hostHeader, bodyData)
     }
 
     private nonisolated static func extractRequestHost(from request: String) -> String? {
@@ -149,7 +209,24 @@ actor TelemetryWebServer {
         return nil
     }
 
-    private func buildHTTPResponse(forTarget target: String, hostHeader: String?) async -> Data {
+    private func buildHTTPResponse(
+        method: String,
+        forTarget target: String,
+        hostHeader: String?,
+        body requestBody: Data
+    ) async -> Data {
+        if method == "OPTIONS" {
+            return Self.httpResponse(
+                status: "204 No Content",
+                contentType: "text/plain; charset=utf-8",
+                extraHeaders: [
+                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type"
+                ],
+                body: Data()
+            )
+        }
+
         let components = URLComponents(string: "http://localhost" + target)
         let path = components?.path ?? "/"
         let windowSeconds = components?.queryItems?
@@ -158,6 +235,39 @@ actor TelemetryWebServer {
             .flatMap(Double.init) ?? 3600.0
 
         switch path {
+        case "/api/metal-hud":
+            guard method == "POST" else {
+                return Self.httpResponse(
+                    status: "405 Method Not Allowed",
+                    contentType: "application/json; charset=utf-8",
+                    body: Data("{\"error\":\"POST required\"}".utf8)
+                )
+            }
+            guard let payload = try? JSONDecoder().decode(MetalHUDIngestPayload.self, from: requestBody),
+                  payload.fps.isFinite, payload.fps >= 0, payload.fps <= 240 else {
+                return Self.httpResponse(
+                    status: "400 Bad Request",
+                    contentType: "application/json; charset=utf-8",
+                    body: Data("{\"error\":\"invalid payload\"}".utf8)
+                )
+            }
+            let computedFrameMs = payload.frameTimeMs ?? (payload.fps > 0 ? (1000.0 / payload.fps) : 0.0)
+            let metrics = ExternalMetalHUDMetrics(
+                fps: payload.fps,
+                frameTimeMs: computedFrameMs,
+                vramMB: payload.vramMB,
+                ramMB: payload.ramMB,
+                gameName: payload.gameName,
+                bundleId: payload.bundleId,
+                updatedAt: Date()
+            )
+            await ExternalMetalHUDStore.shared.update(metrics)
+            self.latestSnapshot = self.latestSnapshot.with(metalHUD: metrics)
+            return Self.httpResponse(
+                status: "200 OK",
+                contentType: "application/json; charset=utf-8",
+                body: Data("{\"ok\":true}".utf8)
+            )
         case "/", "/index.html":
             let body = Data(TelemetryWebDashboardHTML.indexHTML.utf8)
             return Self.httpResponse(status: "200 OK", contentType: "text/html; charset=utf-8", body: body)
@@ -186,7 +296,11 @@ actor TelemetryWebServer {
                         maxGatewayMs: sample.gatewayRTTMs,
                         dropCount: sample.isTargetLost ? 1 : 0,
                         udpDropCount: sample.isUDPLost ? 1 : 0,
-                        sampleCount: 1
+                        sampleCount: 1,
+                        avgGameFPS: self.latestSnapshot.gameFPS,
+                        minGameFPS: self.latestSnapshot.gameFPS,
+                        avgGameVRAMMB: self.latestSnapshot.gameVRAMMB,
+                        avgGameRAMMB: self.latestSnapshot.gameRAMMB
                     )
                 }
             }
@@ -236,11 +350,16 @@ actor TelemetryWebServer {
             let elementsParam = components?.queryItems?.first(where: { $0.name == "elements" })?.value
             let alignParam = components?.queryItems?.first(where: { $0.name == "align" })?.value
             let scaleParam = components?.queryItems?.first(where: { $0.name == "scale" })?.value
+            let streamWebParam = components?.queryItems?.first(where: { $0.name == "streamWeb" })?.value
+            let streamWebURL = (streamWebParam == "1" || streamWebParam == "true")
+                ? "http://\(effectiveHost)"
+                : nil
             let script = MetalHUDLauncherPayloads.windowsBatchScript(
                 serverHost: effectiveHost,
                 elements: elementsParam,
                 align: alignParam,
-                scale: scaleParam
+                scale: scaleParam,
+                streamWebURL: streamWebURL
             )
             return Self.httpResponse(
                 status: "200 OK",
