@@ -187,13 +187,13 @@ struct HUDDashboardSection: View {
                 .foregroundStyle(.secondary)
 
             DisclosureGroup(
-                L10n.tr("Step-by-step: check or hide Metal HUD opacity"),
+                L10n.tr("Step-by-step: Developer Mode, mini HUD & opacity"),
                 isExpanded: self.$showMetalHUDOpacityGuide
             ) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(L10n.tr("1. Open Settings -> Developer -> Graphics HUD (keep Show Graphics HUD turned OFF)."))
-                    Text(L10n.tr("2. To keep 100% invisible even after switching apps: drag HUD Opacity down to 0% in Settings and choose Invisible (Web Only) on :8787."))
-                    Text(L10n.tr("3. To check or show on screen again: raise HUD Opacity back to 100% in Settings and choose Opacity: 100% on :8787."))
+                    Text(L10n.tr("1. Prerequisite: enable Settings -> Privacy & Security -> Developer Mode (required). Then open Settings -> Developer -> Metal HUD (keep Show Metal Performance HUD OFF)."))
+                    Text(L10n.tr("2. Keep mini when switching apps: drag Scale to minimum, enable only FPS under Metrics, and turn ON Log Metal Performance."))
+                    Text(L10n.tr("3. Opacity: keep 100% to see mini FPS on screen, or drag to 0% + choose Invisible (Web Only) on :8787 to hide on screen while FPS stays live on PC."))
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)

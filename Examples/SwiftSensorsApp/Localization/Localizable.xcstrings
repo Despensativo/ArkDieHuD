@@ -407,31 +407,31 @@
         }
       }
     },
-    "1. Open Settings -> Developer -> Graphics HUD (keep Show Graphics HUD turned OFF).": {
+    "1. Prerequisite: enable Settings -> Privacy & Security -> Developer Mode (required). Then open Settings -> Developer -> Metal HUD (keep Show Metal Performance HUD OFF).": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "1. Open Settings -> Developer -> Graphics HUD (keep Show Graphics HUD turned OFF)."
+            "value": "1. Prerequisite: enable Settings -> Privacy & Security -> Developer Mode (required). Then open Settings -> Developer -> Metal HUD (keep Show Metal Performance HUD OFF)."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "1. Abre Ajustes -> Desarrollador -> Graphics HUD (mantén Show Graphics HUD desactivado)."
+            "value": "1. Requisito previo: activa Ajustes -> Privacidad y Seguridad -> Modo de Desarrollador (obligatorio). Luego abre Ajustes -> Desarrollador -> HUD de Metal (mantén Mostrar HUD desactivado)."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "1. Abra Ajustes -> Desenvolvedor -> Graphics HUD (mantenha Show Graphics HUD desligado)."
+            "value": "1. Pré-requisito: ative Ajustes -> Privacidade e Segurança -> Modo Desenvolvedor (obrigatório). Depois abra Ajustes -> Desenvolvedor -> HUD Metal (mantenha Mostrar HUD desligado)."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "1. Abra Ajustes -> Desenvolvedor -> Graphics HUD (mantenha Show Graphics HUD desligado)."
+            "value": "1. Pré-requisito: ative Ajustes -> Privacidade e Segurança -> Modo Desenvolvedor (obrigatório). Depois abra Ajustes -> Desenvolvedor -> HUD Metal (mantenha Mostrar HUD desligado)."
           }
         }
       }
@@ -494,31 +494,31 @@
         }
       }
     },
-    "2. To keep 100% invisible even after switching apps: drag HUD Opacity down to 0% in Settings and choose Invisible (Web Only) on :8787.": {
+    "2. Keep mini when switching apps: drag Scale to minimum, enable only FPS under Metrics, and turn ON Log Metal Performance.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "2. To keep 100% invisible even after switching apps: drag HUD Opacity down to 0% in Settings and choose Invisible (Web Only) on :8787."
+            "value": "2. Keep mini when switching apps: drag Scale to minimum, enable only FPS under Metrics, and turn ON Log Metal Performance."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "2. Para quitar 100% la opacidad (incluso al salir/volver al juego): baja Opacidad al 0% en Ajustes y elige Invisible (Solo Web) en :8787."
+            "value": "2. Para seguir pequeño al cambiar de app: baja Escala al mínimo, activa solo FPS en Métricas y enciende Registrar rendimiento de Metal."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "2. Para tirar 100% a opacidade (mesmo saindo/voltando do jogo): arraste Opacidade até 0% nos Ajustes e escolha Invisível (Só Web) no :8787."
+            "value": "2. Para continuar pequeno ao sair e voltar: arraste Escala ao mínimo, ative só FPS em Métricas e ligue Registrar Desempenho do Metal."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "2. Para tirar 100% a opacidade (mesmo saindo/voltando do jogo): arraste Opacidade até 0% nos Ajustes e escolha Invisível (Só Web) no :8787."
+            "value": "2. Para continuar pequeno ao sair e voltar: arraste Escala ao mínimo, ative só FPS em Métricas e ligue Registrar Desempenho do Metal."
           }
         }
       }
@@ -610,31 +610,31 @@
         }
       }
     },
-    "3. To check or show on screen again: raise HUD Opacity back to 100% in Settings and choose Opacity: 100% on :8787.": {
+    "3. Opacity: keep 100% to see mini FPS on screen, or drag to 0% + choose Invisible (Web Only) on :8787 to hide on screen while FPS stays live on PC.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "3. To check or show on screen again: raise HUD Opacity back to 100% in Settings and choose Opacity: 100% on :8787."
+            "value": "3. Opacity: keep 100% to see mini FPS on screen, or drag to 0% + choose Invisible (Web Only) on :8787 to hide on screen while FPS stays live on PC."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "3. Para revisar o volver a verlo en pantalla: sube Opacidad al 100% en Ajustes y elige Opacidad: 100% en :8787."
+            "value": "3. Opacidad: déjala al 100% para ver el mini FPS en pantalla, o bájala al 0% + elige Invisible (Solo Web) en :8787 para ocultarlo manteniendo el FPS en vivo en PC."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "3. Para checar ou voltar a ver na tela: suba a Opacidade para 100% nos Ajustes e escolha Opacidade: 100% no :8787."
+            "value": "3. Opacidade: deixe 100% para ver o mini FPS na tela, ou arraste para 0% + escolha Invisível (Só Web) no :8787 para ocultar na tela mantendo o FPS ao vivo no PC."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "3. Para checar ou voltar a ver na tela: suba a Opacidade para 100% nos Ajustes e escolha Opacidade: 100% no :8787."
+            "value": "3. Opacidade: deixe 100% para ver o mini FPS na tela, ou arraste para 0% + escolha Invisível (Só Web) no :8787 para ocultar na tela mantendo o FPS ao vivo no PC."
           }
         }
       }
@@ -8643,31 +8643,31 @@
         }
       }
     },
-    "Step-by-step: check or hide Metal HUD opacity": {
+    "Step-by-step: Developer Mode, mini HUD & opacity": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Step-by-step: check or hide Metal HUD opacity"
+            "value": "Step-by-step: Developer Mode, mini HUD & opacity"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paso a paso: revisar o quitar la opacidad del Metal HUD"
+            "value": "Paso a paso: Modo Desarrollador, HUD pequeño y opacidad"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passo a passo: checar ou tirar a opacidade do Metal HUD"
+            "value": "Passo a passo: Modo Desenvolvedor, HUD pequeno e opacidade"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passo a passo: checar ou tirar a opacidade do Metal HUD"
+            "value": "Passo a passo: Modo Desenvolvedor, HUD pequeno e opacidade"
           }
         }
       }

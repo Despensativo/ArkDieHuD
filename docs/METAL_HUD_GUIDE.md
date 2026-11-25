@@ -97,20 +97,32 @@ xcrun devicectl device copy from \
 
 ---
 
-## 6. Passo a Passo: Deixar o Metal HUD 100% Invisível na Tela (Só Web `:8787`) ou Restaurar Opacidade
+## 6. Passo a Passo: Ativar Modo Desenvolvedor e Manter o HUD Pequeno (ou Invisível Só Web `:8787`) ao Sair e Voltar do Jogo
 
-Quando um jogo vai para segundo plano e volta para a tela no iOS/iPadOS, o sistema recria a camada Metal aplicando o controle nativo de **Opacidade** salvo em **Ajustes → Desenvolvedor → Graphics HUD** — **mesmo quando a chave `Show Graphics HUD` está desligada**.
+Por padrão no iOS/iPadOS, se você sair de um jogo para outro app e voltar, o sistema recria a camada gráfica usando as preferências nativas salvas em **Ajustes → Desenvolvedor → HUD Metal** (*Settings → Developer → Metal HUD / Graphics HUD*) — **mesmo quando a chave `Mostrar HUD de Desempenho do Metal` está desativada**.
 
-### Para tirar 100% a opacidade (tela limpa mesmo saindo e voltando do jogo):
-1. No iPad/iPhone, abra **Ajustes → Desenvolvedor → Graphics HUD** (*Settings → Developer → Graphics HUD*).
-2. Mantenha **Show Graphics HUD** **desligado** (*OFF*).
-3. Arraste o controle de **Opacidade (`HUD Opacity`)** até **0% (mínimo)**.
-4. No painel Web **`:8787`**, selecione **`Invisível (Só Web)`** (ou passe `--opacity 0` no comando) e mantenha a janela do Terminal / `.bat` aberta enquanto joga. O FPS, ms/quadro, VRAM e RAM continuarão carregando ao vivo no navegador e nos logs 24h sem nada desenhado na tela do jogo.
+Configurar esses ajustes uma única vez evita que o HUD volte gigante com todos os gráficos na tela e garante que ele funcione corretamente com o `:8787`:
 
-### Para checar ou voltar a ver o Metal HUD na tela do iPad/iPhone:
-1. Abra **Ajustes → Desenvolvedor → Graphics HUD**.
-2. Suba o controle de **Opacidade (`HUD Opacity`)** novamente (ex.: **100%**).
-3. No painel Web **`:8787`**, selecione **`Opacidade: 100%`** (ou remova `--opacity 0`) e inicie o jogo novamente pelo comando de 1 clique.
+### Passo 1 — Pré-requisito obrigatório: Ativar o Modo Desenvolvedor
+1. No iPad/iPhone, abra **Ajustes → Privacidade e Segurança → Modo Desenvolvedor** (*Settings → Privacy & Security → Developer Mode*).
+2. Ative a chave, toque para **reiniciar** quando solicitado e confirme após ligar.
+   *(Sem o Modo Desenvolvedor ativo, o menu **Desenvolvedor → HUD Metal** não aparece e os launchers não conseguem iniciar jogos com Metal HUD.)*
+
+### Passo 2 — Configurar o `HUD Metal` nativo (para continuar pequeno mesmo saindo/voltando do jogo)
+Abra **Ajustes → Desenvolvedor → HUD Metal**:
+1. **`Mostrar HUD de Desempenho do Metal`**: mantenha **Desativado** *(assim o HUD não aparece em apps comuns, apenas nos jogos iniciados pelo launcher — mas o iPadOS continuará respeitando suas escolhas abaixo quando o jogo voltar do segundo plano)*.
+2. **`Registrar Desempenho do Metal`**: deixe **Ativado** para facilitar o registro de desempenho/logs de FPS.
+3. **`Localização`**: escolha o canto desejado (ex.: **Superior Direita**).
+4. **`Escala`**: arraste o controle deslizante para o **mínimo (esquerda)** para que o contador fique pequeno e discreto.
+5. **`Métricas`**: desligue as demais chaves e deixe ativado **apenas `FPS`** (ou apenas as que quiser ver na tela, ex.: `FPS` + `Tempo da GPU`).
+   > Resultado: mesmo quando você sair do jogo e voltar, o iPadOS manterá apenas o contador pequeno de **FPS** no canto escolhido!
+
+### Passo 3 — Escolher entre HUD Pequeno na Tela ou 100% Invisível (`Opacidade`)
+- **Para ver só o mini FPS na tela:** em **Ajustes → Desenvolvedor → HUD Metal**, mantenha **Opacidade** em **100%** (ícone preenchido à direita) e use **`Ultra Compacto (Só FPS)`** no painel `:8787`.
+- **Para ocultar 100% da tela (ver FPS só no navegador `:8787`):**
+  1. Em **Ajustes → Desenvolvedor → HUD Metal**, arraste **Opacidade** até **0%** (ícone vazio à esquerda).
+  2. No painel Web **`:8787`**, selecione **`Invisível (Só Web)`** (ou passe `--opacity 0` no comando) e mantenha a janela do Terminal / `.bat` aberta durante a partida (`Control+C` para encerrar).
+  3. **Para checar ou voltar a ver na tela depois:** suba a **Opacidade** nos Ajustes para **100%** e mude para **`Opacidade: 100%`** no painel `:8787`.
 
 ---
 

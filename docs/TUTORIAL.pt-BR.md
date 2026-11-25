@@ -142,10 +142,10 @@ Você pode abrir **qualquer jogo ou aplicativo instalado no iPhone/iPad** com o 
 
 Consulte [METAL_HUD_GUIDE.md](METAL_HUD_GUIDE.md) para detalhes de pareamento.
 
-> **Dica — Deixar o Metal HUD 100% Invisível na Tela (Só Web `:8787`) ou Restaurar Opacidade:**
-> 1. No iPad/iPhone, abra **Ajustes → Desenvolvedor → Graphics HUD** e mantenha **Show Graphics HUD** **desligado**.
-> 2. **Para tirar a opacidade (tela limpa mesmo saindo/voltando do jogo):** arraste **Opacidade (`HUD Opacity`)** até **0%** nos Ajustes e escolha **`Invisível (Só Web)`** no painel `:8787` (mantenha o Terminal / `.bat` aberto para enviar o FPS ao vivo).
-> 3. **Para checar ou voltar a ver na tela:** suba **Opacidade (`HUD Opacity`)** novamente para **100%** nos Ajustes e mude para **`Opacidade: 100%`** no painel `:8787`.
+> **Importante — Modo Desenvolvedor + Deixar o Metal HUD Pequeno ou Invisível mesmo ao sair e voltar do jogo:**
+> 1. **Pré-requisito obrigatório:** ative **Ajustes → Privacidade e Segurança → Modo Desenvolvedor** no iPad/iPhone (reinicie se solicitado).
+> 2. Em **Ajustes → Desenvolvedor → HUD Metal**, mantenha **Mostrar HUD de Desempenho do Metal** **desativado**, ative **Registrar Desempenho do Metal**, arraste **Escala** para o **mínimo** e em **Métricas** deixe ligado **apenas `FPS`** (assim, mesmo se você sair e voltar do jogo, ele continua pequeno e só com FPS em vez de voltar gigante!).
+> 3. **Opacidade (Visível vs Só Web `:8787`):** deixe **Opacidade** em **100%** para ver o mini FPS na tela; ou arraste **Opacidade** até **0%** + escolha **`Invisível (Só Web)`** no painel `:8787` para ocultar da tela e acompanhar o FPS apenas pelo navegador (para voltar a ver, basta subir para **100%** nos Ajustes).
 
 ---
 

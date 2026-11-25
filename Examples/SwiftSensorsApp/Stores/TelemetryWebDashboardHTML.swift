@@ -323,19 +323,21 @@ enum TelemetryWebDashboardHTML {
     macOS: click Copy Mac Command, paste into Terminal and press Enter (no Gatekeeper or chmod prompts; works over Wi-Fi or USB). Windows: download Windows (.bat), install Python 3 + Apple Devices/iTunes USB driver, and right-click -&gt; Run as Administrator.
   </p>
   <details id="hudOpacityGuideDetails" open style="margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.22);font-size:11.5px;line-height:1.5;">
-    <summary id="hudOpacityGuideTitle" style="cursor:pointer;font-weight:600;color:var(--accent);">Step-by-step: check or hide Metal HUD opacity</summary>
-    <div id="hudGuideBaseStep" style="margin-top:8px;color:var(--text);font-weight:500;">1. On your iPad/iPhone, open Settings → Developer → Graphics HUD and keep Show Graphics HUD turned OFF.</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-top:8px;">
-      <div style="padding:8px 10px;border-radius:7px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.25);">
-        <div id="hudHideCardTitle" style="font-weight:600;color:var(--green);margin-bottom:4px;">Hide on screen (Web only)</div>
-        <div id="hudHideLine1" style="color:var(--text);">• In Settings, drag Opacity down to 0%.</div>
-        <div id="hudHideLine2" style="color:var(--text);">• Above, choose Invisible (Web Only).</div>
-        <div id="hudHideNote" style="color:var(--muted);font-size:11px;margin-top:3px;">Stays 100% invisible even if you leave and return to the game.</div>
-      </div>
+    <summary id="hudOpacityGuideTitle" style="cursor:pointer;font-weight:600;color:var(--accent);">Step-by-step: Developer Mode &amp; keeping HUD tiny or hidden</summary>
+    <div id="hudGuideDevStep" style="margin-top:8px;color:var(--text);">1. Prerequisite — enable Developer Mode: on iPad/iPhone open Settings → Privacy &amp; Security → Developer Mode (restart if prompted; required for Developer menu &amp; launcher).</div>
+    <div id="hudGuideBaseStep" style="margin-top:5px;color:var(--text);font-weight:500;">2. Open Settings → Developer → Metal HUD (keep "Show Metal Performance HUD" OFF — iOS/iPadOS still reuses these settings when returning to a game):</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:8px;">
       <div style="padding:8px 10px;border-radius:7px;background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.25);">
-        <div id="hudShowCardTitle" style="font-weight:600;color:var(--accent);margin-bottom:4px;">Check or show on screen again</div>
-        <div id="hudShowLine1" style="color:var(--text);">• In Settings, raise Opacity back to 100%.</div>
-        <div id="hudShowLine2" style="color:var(--text);">• Above, choose Opacity: 100% and relaunch via the command.</div>
+        <div id="hudShowCardTitle" style="font-weight:600;color:var(--accent);margin-bottom:4px;">Keep tiny on screen (stays mini after switching)</div>
+        <div id="hudShowLine1" style="color:var(--text);">• Drag Scale to minimum (left) and turn ON Log Metal Performance.</div>
+        <div id="hudShowLine2" style="color:var(--text);">• Under Metrics, disable all except FPS so it never comes back huge.</div>
+        <div id="hudShowLine3" style="color:var(--muted);font-size:11px;margin-top:3px;">Keep Opacity at 100% in Settings (to check/restore visibility anytime).</div>
+      </div>
+      <div style="padding:8px 10px;border-radius:7px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.25);">
+        <div id="hudHideCardTitle" style="font-weight:600;color:var(--green);margin-bottom:4px;">Hide on screen (view FPS on Web :8787 only)</div>
+        <div id="hudHideLine1" style="color:var(--text);">• In Settings → Metal HUD, drag Opacity all the way left to 0%.</div>
+        <div id="hudHideLine2" style="color:var(--text);">• Above, choose Invisible (Web Only) and launch via the command.</div>
+        <div id="hudHideNote" style="color:var(--muted);font-size:11px;margin-top:3px;">Stays 100% invisible even after leaving and returning to the game.</div>
       </div>
     </div>
     <div id="hudStreamTip" style="margin-top:8px;color:var(--muted);font-size:11px;">Tip: keep Terminal (Mac) or the .bat window (Windows) open while playing so live FPS updates here (Control+C to stop).</div>
@@ -373,15 +375,17 @@ const I18N = {
     dlWinBtn: "Windows (.bat)",
     dlPyBtn: "Python Script (.py)",
     metalHudHint: "macOS: click Copy Mac Command, paste into Terminal and press Enter (no Gatekeeper or chmod prompts; works over Wi-Fi or USB). Windows: download Windows (.bat), install Python 3 + Apple Devices/iTunes USB driver, and right-click -> Run as Administrator.",
-    hudOpacityGuideTitle: "Step-by-step: check or hide Metal HUD opacity",
-    hudGuideBaseStep: "1. On your iPad/iPhone, open Settings → Developer → Graphics HUD and keep Show Graphics HUD turned OFF.",
-    hudHideCardTitle: "Hide on screen (Web only)",
-    hudHideLine1: "• In Settings, drag Opacity down to 0%.",
-    hudHideLine2: "• Above, choose Invisible (Web Only).",
-    hudHideNote: "Stays 100% invisible even if you leave and return to the game.",
-    hudShowCardTitle: "Check or show on screen again",
-    hudShowLine1: "• In Settings, raise Opacity back to 100%.",
-    hudShowLine2: "• Above, choose Opacity: 100% and relaunch via the command.",
+    hudOpacityGuideTitle: "Step-by-step: Developer Mode & keeping HUD tiny or hidden",
+    hudGuideDevStep: "1. Prerequisite — enable Developer Mode: on iPad/iPhone open Settings → Privacy & Security → Developer Mode (restart if prompted; required for Developer menu & launcher).",
+    hudGuideBaseStep: "2. Open Settings → Developer → Metal HUD (keep 'Show Metal Performance HUD' OFF — iOS/iPadOS still reuses these settings when returning to a game):",
+    hudShowCardTitle: "Keep tiny on screen (stays mini after switching)",
+    hudShowLine1: "• Drag Scale to minimum (left) and turn ON Log Metal Performance.",
+    hudShowLine2: "• Under Metrics, disable all except FPS so it never comes back huge.",
+    hudShowLine3: "Keep Opacity at 100% in Settings (to check/restore visibility anytime).",
+    hudHideCardTitle: "Hide on screen (view FPS on Web :8787 only)",
+    hudHideLine1: "• In Settings → Metal HUD, drag Opacity all the way left to 0%.",
+    hudHideLine2: "• Above, choose Invisible (Web Only) and launch via the command.",
+    hudHideNote: "Stays 100% invisible even after leaving and returning to the game.",
     hudStreamTip: "Tip: keep Terminal (Mac) or the .bat window (Windows) open while playing so live FPS updates here (Control+C to stop).",
     hwTitle: "Silicon & Power (CPU / GPU / Watts)",
     hwLegend: "Blue: CPU °C • Orange: GPU °C • Purple: W",
@@ -468,15 +472,17 @@ const I18N = {
     dlWinBtn: "Windows (.bat)",
     dlPyBtn: "Script Python (.py)",
     metalHudHint: "macOS: clique em Copiar Comando Mac, cole no Terminal e aperte Enter (sem bloqueio do Gatekeeper nem chmod; funciona via Wi-Fi ou USB). Windows: baixe Windows (.bat), tenha Python 3 + driver USB Dispositivos Apple/iTunes e clique com botão direito -> Executar como Administrador.",
-    hudOpacityGuideTitle: "Passo a passo: checar ou tirar a opacidade do Metal HUD",
-    hudGuideBaseStep: "1. No iPad/iPhone, abra Ajustes → Desenvolvedor → Graphics HUD e mantenha Show Graphics HUD desligado.",
-    hudHideCardTitle: "Ocultar da tela (ver FPS só na Web)",
-    hudHideLine1: "• Nos Ajustes do aparelho, arraste Opacidade até 0%.",
-    hudHideLine2: "• No seletor acima, escolha Invisível (Só Web).",
+    hudOpacityGuideTitle: "Passo a passo: ativar Modo Desenvolvedor e manter HUD pequeno ou invisível",
+    hudGuideDevStep: "1. Pré-requisito — ative o Modo Desenvolvedor: no iPad/iPhone abra Ajustes → Privacidade e Segurança → Modo Desenvolvedor (reinicie se pedir; sem isso o menu e o launcher não funcionam).",
+    hudGuideBaseStep: "2. Abra Ajustes → Desenvolvedor → HUD Metal (mantenha 'Mostrar HUD de Desempenho do Metal' DESATIVADO; mesmo desligado, o iOS usa os ajustes abaixo ao sair e voltar para o jogo):",
+    hudShowCardTitle: "Deixar pequeno na tela (não volta gigante ao sair/voltar)",
+    hudShowLine1: "• Arraste Escala ao mínimo (esquerda) e ative Registrar Desempenho do Metal.",
+    hudShowLine2: "• Em Métricas, deixe só FPS ligado (desative o resto).",
+    hudShowLine3: "Deixe Opacidade em 100% nos Ajustes (e use para checar ou restaurar quando quiser).",
+    hudHideCardTitle: "Ocultar da tela (ver FPS só aqui na Web)",
+    hudHideLine1: "• Em Ajustes → HUD Metal, arraste Opacidade até 0% (óculos claro à esquerda).",
+    hudHideLine2: "• No seletor acima, escolha Invisível (Só Web) e inicie pelo comando.",
     hudHideNote: "Fica 100% invisível mesmo se você sair e voltar para o jogo.",
-    hudShowCardTitle: "Checar ou voltar a ver na tela",
-    hudShowLine1: "• Nos Ajustes do aparelho, suba Opacidade para 100%.",
-    hudShowLine2: "• No seletor acima, escolha Opacidade: 100% e reabra pelo comando.",
     hudStreamTip: "Dica: mantenha o Terminal (Mac) ou janela .bat (Windows) aberto enquanto joga para o FPS atualizar ao vivo (Control+C para parar).",
     hwTitle: "Silício e Energia (CPU / GPU / Watts)",
     hwLegend: "Azul: CPU °C • Laranja: GPU °C • Roxo: W",
@@ -555,15 +561,17 @@ const I18N = {
     dlWinBtn: "Windows (.bat)",
     dlPyBtn: "Script Python (.py)",
     metalHudHint: "macOS: pulsa Copiar Comando Mac, pega en Terminal y presiona Enter (sin bloqueo de Gatekeeper ni chmod; funciona por Wi-Fi o USB). Windows: descarga Windows (.bat), instala Python 3 + driver USB Apple Devices/iTunes y clic derecho -> Ejecutar como Administrador.",
-    hudOpacityGuideTitle: "Paso a paso: revisar o quitar la opacidad del Metal HUD",
-    hudGuideBaseStep: "1. En tu iPad/iPhone, abre Ajustes → Desarrollador → Graphics HUD y mantén Show Graphics HUD desactivado.",
+    hudOpacityGuideTitle: "Paso a paso: activar Modo Desarrollador y mantener el HUD pequeño o invisible",
+    hudGuideDevStep: "1. Requisito previo — activa el Modo Desarrollador: en iPad/iPhone abre Ajustes → Privacidad y Seguridad → Modo de Desarrollador (reinicia si lo pide; necesario para el menú y el launcher).",
+    hudGuideBaseStep: "2. Abre Ajustes → Desarrollador → HUD de Metal (mantén 'Mostrar HUD de rendimiento de Metal' DESACTIVADO; aunque esté apagado, iOS aplica estos ajustes al salir/volver al juego):",
+    hudShowCardTitle: "Mantener pequeño en pantalla (sigue mini al cambiar de app)",
+    hudShowLine1: "• Baja Escala al mínimo (izquierda) y activa Registrar rendimiento de Metal.",
+    hudShowLine2: "• En Métricas, deja solo FPS activado para que no vuelva gigante.",
+    hudShowLine3: "Deja Opacidad al 100% en Ajustes (para revisar o volver a verlo cuando quieras).",
     hudHideCardTitle: "Ocultar en pantalla (ver FPS solo en Web)",
-    hudHideLine1: "• En Ajustes del dispositivo, baja Opacidad al 0%.",
-    hudHideLine2: "• En el selector de arriba, elige Invisible (Solo Web).",
+    hudHideLine1: "• En Ajustes → HUD de Metal, baja Opacidad al 0% (izquierda).",
+    hudHideLine2: "• Arriba, elige Invisible (Solo Web) y abre el juego con el comando.",
     hudHideNote: "Permanece 100% invisible incluso al salir y volver al juego.",
-    hudShowCardTitle: "Revisar o volver a ver en pantalla",
-    hudShowLine1: "• En Ajustes del dispositivo, sube Opacidad al 100%.",
-    hudShowLine2: "• En el selector de arriba, elige Opacidad: 100% y reabre con el comando.",
     hudStreamTip: "Consejo: mantén abierta la Terminal (Mac) o ventana .bat (Windows) mientras juegas para actualizar el FPS en vivo (Control+C para detener).",
     hwTitle: "Silicio y Energía (CPU / GPU / Watts)",
     hwLegend: "Azul: CPU °C • Naranja: GPU °C • Púrpura: W",
@@ -762,14 +770,16 @@ function applyStaticTranslations() {
   document.getElementById("dlPyBtn").textContent = s.dlPyBtn;
   document.getElementById("metalHudHint").textContent = s.metalHudHint;
   document.getElementById("hudOpacityGuideTitle").textContent = s.hudOpacityGuideTitle;
+  document.getElementById("hudGuideDevStep").textContent = s.hudGuideDevStep;
   document.getElementById("hudGuideBaseStep").textContent = s.hudGuideBaseStep;
+  document.getElementById("hudShowCardTitle").textContent = s.hudShowCardTitle;
+  document.getElementById("hudShowLine1").textContent = s.hudShowLine1;
+  document.getElementById("hudShowLine2").textContent = s.hudShowLine2;
+  document.getElementById("hudShowLine3").textContent = s.hudShowLine3;
   document.getElementById("hudHideCardTitle").textContent = s.hudHideCardTitle;
   document.getElementById("hudHideLine1").textContent = s.hudHideLine1;
   document.getElementById("hudHideLine2").textContent = s.hudHideLine2;
   document.getElementById("hudHideNote").textContent = s.hudHideNote;
-  document.getElementById("hudShowCardTitle").textContent = s.hudShowCardTitle;
-  document.getElementById("hudShowLine1").textContent = s.hudShowLine1;
-  document.getElementById("hudShowLine2").textContent = s.hudShowLine2;
   document.getElementById("hudStreamTip").textContent = s.hudStreamTip;
   document.getElementById("hwChartTitle").textContent = s.hwTitle;
   document.getElementById("hwChartLegend").textContent = s.hwLegend;
