@@ -18,12 +18,14 @@ Welcome to **ArkDieHuD**. This guide walks you through installing the app (even 
 2. Toggle **Developer Mode** ON, restart your iPad when prompted, and confirm after reboot.
    *(If Developer Mode does not appear yet, plug your iPad into a Mac/PC running Xcode or Sideloadly once — iPadOS reveals it automatically.)*
 
-### Option A: SideStore / AltStore Official Source (Recommended for Auto-Updates & Auto-Refresh)
-1. In **SideStore** or **AltStore** on your iPad, go to **Sources → +** and add:
+### Option A: SideStore / AltStore Classic Official Source (Recommended for Auto-Updates & Auto-Refresh)
+1. In **SideStore** or **AltStore Classic** on your iPad, go to **Sources → +** and add:
    ```text
    https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/altstore-source.json
    ```
-2. Tap **ArkDieHuD** → **GET** (uses any **free Apple ID**, valid 7 days and auto-refreshed by SideStore/AltStore).
+2. Tap **ArkDieHuD** → **GET** (uses any **free Apple ID**, valid 7 days and auto-refreshed by SideStore/AltStore Classic).
+
+> **Important (Brazil, EU & Japan):** On [altstore.io](https://altstore.io/), use **AltStore Classic** (via AltServer) or **SideStore** — **not AltStore PAL**. AltStore PAL only installs Apple-notarized marketplace packages (ADP) and cannot install `.ipa` files or apps using private `IOHID` die thermal sensors / private PiP controls.
 
 ### Option B: Sideloadly + `.ipa` (Windows or Mac — No Xcode Needed)
 1. Download [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) from **[GitHub Releases](https://github.com/Despensativo/ArkDieHuD/releases)**.

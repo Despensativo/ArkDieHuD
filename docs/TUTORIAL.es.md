@@ -17,12 +17,14 @@ Bienvenido a **ArkDieHuD**. Esta guía explica cómo instalar la app (incluso co
 1. Ve a **Ajustes → Privacidad y Seguridad → Modo de Desarrollador**.
 2. Actívalo, reinicia el iPad cuando se solicite y confirma al encender.
 
-### Opción A: Fuente Oficial SideStore / AltStore (Actualizaciones y Renovación Automática)
-1. En **SideStore** o **AltStore**, ve a **Sources → +** y añade:
+### Opción A: Fuente Oficial SideStore / AltStore Classic (Actualizaciones y Renovación Automática)
+1. En **SideStore** o **AltStore Classic**, ve a **Sources → +** y añade:
    ```text
    https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/altstore-source.json
    ```
 2. Toca **ArkDieHuD → GET** (funciona con cualquier **Apple ID gratuito**).
+
+> **Importante (UE, Japón y Brasil):** En [altstore.io](https://altstore.io/), usa **AltStore Classic** (vía AltServer) o **SideStore** — **no AltStore PAL**. AltStore PAL solo instala paquetes notarizados por Apple (ADP) y no admite archivos `.ipa` sin firmar ni APIs privadas (`IOHID` de temperatura del silicio ni controles internos de PiP).
 
 ### Opción B: Instalar `.ipa` con Sideloadly (Windows o Mac — Sin Xcode)
 1. Descarga [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) desde **[Releases](https://github.com/Despensativo/ArkDieHuD/releases)**.

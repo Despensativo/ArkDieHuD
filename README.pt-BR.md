@@ -63,7 +63,7 @@
 | Método | Para quem é? | Precisa de Mac / Xcode? | Como funciona |
 | :--- | :--- | :--- | :--- |
 | **1. Sideloadly + `.ipa`** | **Iniciantes / Windows ou Mac** (zero terminal) | **Não** | Baixe [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) e arraste no [Sideloadly](https://sideloadly.io/) com seu **Apple ID gratuito**. |
-| **2. SideStore / AltStore** | **Atualizações e renovação automáticas** no iPad | **Não** *(após configurar)* | Adicione o catálogo oficial abaixo dentro do SideStore/AltStore e toque em **GET**. |
+| **2. SideStore / AltStore Classic** | **Atualizações e renovação automáticas** no iPad | **Não** *(após configurar)* | Adicione o catálogo oficial abaixo dentro do SideStore/AltStore Classic e toque em **GET**. |
 | **3. Assistente no Mac** | **Quem usa Mac com Xcode** | **Sim** | Rode `./install.sh` — detecta iPad e Apple ID sozinho, compila, instala e abre o app. |
 
 ### Opção 1 — Mais Fácil (Windows ou Mac, Sem Xcode)
@@ -71,11 +71,13 @@
 2. Abra o **Sideloadly**, conecte o iPad, informe qualquer **Apple ID gratuito** e arraste o `.ipa` para instalar.
 3. No iPad: ative **Ajustes → Privacidade e Segurança → Modo Desenvolvedor** e confie no perfil em **Ajustes → Geral → Gestão de VPN e Dispositivo**.
 
-### Opção 2 — Catálogo Oficial SideStore / AltStore (1 Toque)
-Cole esta URL dentro de **SideStore** ou **AltStore** (*Sources → +*):
+### Opção 2 — Catálogo Oficial SideStore / AltStore Classic (1 Toque)
+Cole esta URL dentro de **SideStore** ou **AltStore Classic** (*Sources → +*):
 ```text
 https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/altstore-source.json
 ```
+
+> **Importante (Brasil, UE e Japão):** No site [altstore.io](https://altstore.io/), baixe o **AltStore Classic** (via AltServer) ou use o **SideStore** — **não use o AltStore PAL**. O AltStore PAL aceita apenas pacotes notarizados pela Apple (ADP) e bloqueia arquivos `.ipa` comuns e APIs privadas (`IOHID` de temperatura do silício e controles internos do PiP).
 
 ### Opção 3 — Assistente Guiado no Mac (`./install.sh`) e Extras
 ```bash
@@ -99,7 +101,7 @@ iproxy 8787 8787
 ```
 
 > **Apple ID Gratuito vs Conta Paga e Por Que Não Vem Pré-Assinado:**
-> - **Conta Apple gratuita** funciona 100% (vale por **7 dias**; no SideStore/AltStore renova sozinho, ou basta rodar `./install.sh` / Sideloadly de novo). Conta paga dura **1 ano**.
+> - **Conta Apple gratuita** funciona 100% (vale por **7 dias**; no SideStore/AltStore Classic renova sozinho, ou basta rodar `./install.sh` / Sideloadly de novo). Conta paga dura **1 ano**.
 > - Leituras reais do die CPU/GPU e Watts usam APIs privadas (`IOHID`), que a Apple bloqueia na App Store e não permite pré-assinar para aparelhos de terceiros.
 
 ---

@@ -25,7 +25,7 @@ Opções:
 
 Sem Mac/Xcode?
   Baixe o arquivo pronto `ArkDieHuD-unsigned.ipa` na aba Releases do GitHub e
-  instale pelo Sideloadly (Windows/Mac) ou SideStore/AltStore no iPad:
+  instale pelo Sideloadly (Windows/Mac) ou SideStore/AltStore Classic no iPad:
   https://github.com/Despensativo/ArkDieHuD/releases/latest
 EOF
 }
@@ -64,7 +64,7 @@ if ! command -v xcodebuild >/dev/null 2>&1 || ! xcrun --sdk iphoneos --show-sdk-
     echo "   Alternativa leve (Windows ou Mac):"
     echo "   1) Baixe o .ipa pronto:"
     echo "      https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa"
-    echo "   2) Arraste no Sideloadly (ou adicione no SideStore/AltStore) com seu Apple ID gratuito."
+    echo "   2) Arraste no Sideloadly (ou adicione no SideStore/AltStore Classic) com seu Apple ID gratuito."
     exit 1
 fi
 IOS_SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"

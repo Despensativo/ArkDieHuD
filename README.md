@@ -63,7 +63,7 @@
 | Method | Who is it for? | Requires Xcode / Mac? | How it works |
 | :--- | :--- | :--- | :--- |
 | **1. Sideloadly + `.ipa`** | **Beginners / Windows or Mac** (no coding) | **No** | Download [`ArkDieHuD-unsigned.ipa`](https://github.com/Despensativo/ArkDieHuD/releases/latest/download/ArkDieHuD-unsigned.ipa) and drag into [Sideloadly](https://sideloadly.io/) with any **free Apple ID**. |
-| **2. SideStore / AltStore** | **Auto-updates & auto-refresh** on iPad | **No** *(after setup)* | Add this repo's source URL inside SideStore/AltStore and tap **GET**. |
+| **2. SideStore / AltStore Classic** | **Auto-updates & auto-refresh** on iPad | **No** *(after setup)* | Add this repo's source URL inside SideStore/AltStore Classic and tap **GET**. |
 | **3. Guided Mac Wizard** | **Mac users with Xcode** | **Yes** | Run `./install.sh` — auto-detects your iPad, Apple ID signing team, compiles, and opens the app. |
 
 ### Option 1 — Easiest (Windows or Mac, No Xcode)
@@ -71,11 +71,13 @@
 2. Open **Sideloadly**, connect your iPad, enter your **free Apple ID**, and drop the `.ipa` to install.
 3. On your iPad: enable **Settings → Privacy & Security → Developer Mode**, and trust your Apple ID under **Settings → General → VPN & Device Management**.
 
-### Option 2 — SideStore / AltStore Official Source (1-Tap Updates)
-Paste this Source URL inside **SideStore** or **AltStore** (*Sources → +*):
+### Option 2 — SideStore / AltStore Classic Official Source (1-Tap Updates)
+Paste this Source URL inside **SideStore** or **AltStore Classic** (*Sources → +*):
 ```text
 https://raw.githubusercontent.com/Despensativo/ArkDieHuD/main/altstore-source.json
 ```
+
+> **Important (Brazil, EU & Japan):** On [altstore.io](https://altstore.io/), use **AltStore Classic** (via AltServer) or **SideStore** — **not AltStore PAL**. AltStore PAL only installs Apple-notarized marketplace packages (ADP) and cannot install unsigned `.ipa` files or apps using private `IOHID` die thermal sensors / private PiP controls.
 
 ### Option 3 — Mac Guided Installer (`./install.sh`) & Optional Tools
 ```bash
@@ -99,7 +101,7 @@ iproxy 8787 8787
 ```
 
 > **Free Apple ID vs Paid Account & Why It Is Not on the App Store:**
-> - A **free Apple ID** works 100% (valid for **7 days**; SideStore/AltStore auto-refreshes, or re-run `./install.sh` / Sideloadly). A paid Apple Developer account lasts **1 year**.
+> - A **free Apple ID** works 100% (valid for **7 days**; SideStore/AltStore Classic auto-refreshes, or re-run `./install.sh` / Sideloadly). A paid Apple Developer account lasts **1 year**.
 > - Real Apple Silicon die temperatures and wattage use private `IOHID` APIs, which Apple does not allow on the App Store and cannot be pre-signed for third-party devices.
 
 ---
