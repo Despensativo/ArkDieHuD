@@ -147,10 +147,9 @@ public actor NetworkQualityMonitor {
     private var lastRouteInfo: NetworkRouteInfo = .unknown
     private var hasInitializedRoute: Bool = false
 
-    // Interface throughput tracking (bytes from getifaddrs)
+    // Interface throughput tracking (per-interface 32-bit if_data counters)
     private var lastThroughputTimestamp: Date?
-    private var lastTotalInBytes: UInt64 = 0
-    private var lastTotalOutBytes: UInt64 = 0
+    private var lastInterfaceCounters: [String: (bytesIn: UInt32, bytesOut: UInt32)] = [:]
     private var sessionDownloadBytes: UInt64 = 0
     private var sessionUploadBytes: UInt64 = 0
     private var currentDownloadBps: Double = 0.0
@@ -245,9 +244,7 @@ public actor NetworkQualityMonitor {
         guard !self.isRunning else { return }
         self.isRunning = true
 
-        let (initialIn, initialOut) = ICMPProber.readInterfaceBytes()
-        self.lastTotalInBytes = initialIn
-        self.lastTotalOutBytes = initialOut
+        self.lastInterfaceCounters = ICMPProber.readInterfaceCounters()
         self.lastThroughputTimestamp = Date()
 
         self.pathObserver.start { [weak self] kind, wiredNames, wifiNames in
@@ -307,6 +304,10 @@ public actor NetworkQualityMonitor {
         self.gatewayUseTCPFallback = false
         self.sessionDownloadBytes = 0
         self.sessionUploadBytes = 0
+        self.currentDownloadBps = 0.0
+        self.currentUploadBps = 0.0
+        self.lastInterfaceCounters = ICMPProber.readInterfaceCounters()
+        self.lastThroughputTimestamp = Date()
         ICMPProber.clearDNSCache()
     }
 
@@ -459,21 +460,7 @@ public actor NetworkQualityMonitor {
         self.sequenceNumber += 1
         let seq16 = UInt16(truncatingIfNeeded: self.sequenceNumber)
 
-        // 1. Update throughput & interface/VPN topology
-        let (curIn, curOut) = ICMPProber.readInterfaceBytes()
-        if let lastTime = self.lastThroughputTimestamp {
-            let dt = max(0.1, now.timeIntervalSince(lastTime))
-            let deltaIn = curIn >= self.lastTotalInBytes ? curIn - self.lastTotalInBytes : 0
-            let deltaOut = curOut >= self.lastTotalOutBytes ? curOut - self.lastTotalOutBytes : 0
-            self.sessionDownloadBytes &+= deltaIn
-            self.sessionUploadBytes &+= deltaOut
-            self.currentDownloadBps = Double(deltaIn) / dt
-            self.currentUploadBps = Double(deltaOut) / dt
-        }
-        self.lastTotalInBytes = curIn
-        self.lastTotalOutBytes = curOut
-        self.lastThroughputTimestamp = now
-
+        // 1. Inspect active route/VPN topology & compute per-interface throughput
         let netIf = ICMPProber.inspectLocalInterfaces(
             wiredInterfaceNames: self.wiredInterfaceNames,
             wifiInterfaceNames: self.wifiInterfaceNames,
@@ -493,6 +480,35 @@ public actor NetworkQualityMonitor {
         } else {
             effectiveInterfaceKind = self.pathInterfaceKind
         }
+
+        let curCounters = ICMPProber.readInterfaceCounters()
+        let activeCounterIface: String?
+        if let active = netIf.activeInterfaceName, curCounters[active] != nil {
+            activeCounterIface = active
+        } else if effectiveInterfaceKind == "Celular" {
+            activeCounterIface = curCounters.keys.sorted().first { $0.hasPrefix("pdp_ip") }
+        } else {
+            activeCounterIface = nil
+        }
+
+        if let lastTime = self.lastThroughputTimestamp {
+            let dt = max(0.1, now.timeIntervalSince(lastTime))
+            if let iface = activeCounterIface,
+               let cur = curCounters[iface],
+               let prev = self.lastInterfaceCounters[iface] {
+                let deltaIn = Self.safeCounterDelta(current: cur.bytesIn, previous: prev.bytesIn, dt: dt)
+                let deltaOut = Self.safeCounterDelta(current: cur.bytesOut, previous: prev.bytesOut, dt: dt)
+                self.sessionDownloadBytes &+= deltaIn
+                self.sessionUploadBytes &+= deltaOut
+                self.currentDownloadBps = Double(deltaIn) / dt
+                self.currentUploadBps = Double(deltaOut) / dt
+            } else {
+                self.currentDownloadBps = 0.0
+                self.currentUploadBps = 0.0
+            }
+        }
+        self.lastInterfaceCounters = curCounters
+        self.lastThroughputTimestamp = now
         let isVPNPresent = netIf.vpnInterface != nil
         let probeBoundInterface = self.bypassVPN ? netIf.activeInterfaceName : nil
         let isActivelyBypassingVPN = isVPNPresent && self.bypassVPN && (netIf.activeInterfaceName != nil)
@@ -1147,5 +1163,19 @@ public actor NetworkQualityMonitor {
             return defaultValue
         }
         return UserDefaults.standard.bool(forKey: key)
+    }
+
+    /// Computes a wrap-safe 32-bit `if_data` byte delta while rejecting counter resets (e.g. USB NIC re-plug).
+    private static func safeCounterDelta(current: UInt32, previous: UInt32, dt: TimeInterval) -> UInt64 {
+        if current >= previous {
+            return UInt64(current - previous)
+        }
+        let wrapped = UInt64(current &- previous)
+        let maxPlausibleBytes = UInt64(max(1.0, dt) * 625_000_000.0) // 5 Gbps ceiling
+        if previous > 0xC000_0000 && wrapped <= maxPlausibleBytes {
+            return wrapped
+        }
+        // Interface counter reset to 0 after adapter reconnect
+        return current < 10_000_000 ? UInt64(current) : 0
     }
 }

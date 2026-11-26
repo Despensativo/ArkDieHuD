@@ -311,13 +311,12 @@ enum ICMPProber {
 
     // MARK: - Interface Byte Counters & Local Route / Gateway / VPN Inspection
 
-    static func readInterfaceBytes() -> (bytesIn: UInt64, bytesOut: UInt64) {
+    static func readInterfaceCounters() -> [String: (bytesIn: UInt32, bytesOut: UInt32)] {
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return (0, 0) }
+        guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return [:] }
         defer { freeifaddrs(ifaddr) }
 
-        var totalIn: UInt64 = 0
-        var totalOut: UInt64 = 0
+        var counters: [String: (bytesIn: UInt32, bytesOut: UInt32)] = [:]
 
         var ptr: UnsafeMutablePointer<ifaddrs>? = firstAddr
         while let cur = ptr {
@@ -327,18 +326,18 @@ enum ICMPProber {
                 continue
             }
             let flags = Int32(cur.pointee.ifa_flags)
+            let isUpAndRunning = (flags & (IFF_UP | IFF_RUNNING)) == (IFF_UP | IFF_RUNNING)
             let name = String(cString: ifaNamePtr)
 
-            if (flags & IFF_UP) != 0 && (name.hasPrefix("en") || name.hasPrefix("pdp_ip")) {
+            if isUpAndRunning && (name.hasPrefix("en") || name.hasPrefix("pdp_ip")) {
                 if ifaAddr.pointee.sa_family == UInt8(AF_LINK), let data = cur.pointee.ifa_data {
                     let ifData = data.assumingMemoryBound(to: if_data.self)
-                    totalIn += UInt64(ifData.pointee.ifi_ibytes)
-                    totalOut += UInt64(ifData.pointee.ifi_obytes)
+                    counters[name] = (ifData.pointee.ifi_ibytes, ifData.pointee.ifi_obytes)
                 }
             }
             ptr = cur.pointee.ifa_next
         }
-        return (totalIn, totalOut)
+        return counters
     }
 
     static func inspectLocalInterfaces(
