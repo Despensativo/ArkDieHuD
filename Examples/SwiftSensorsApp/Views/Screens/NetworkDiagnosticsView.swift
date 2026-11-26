@@ -141,7 +141,9 @@ struct NetworkDiagnosticsView: View {
 
                 Label(
                     self.metrics.route.localizedSummary,
-                    systemImage: self.metrics.route.isVPNActive ? "lock.shield.fill" : "wifi"
+                    systemImage: self.metrics.route.isVPNActive
+                        ? "lock.shield.fill"
+                        : (self.metrics.route.interfaceKind == "Ethernet" ? "cable.connector" : "wifi")
                 )
                 .font(.footnote.bold())
                 .padding(.horizontal, 10)

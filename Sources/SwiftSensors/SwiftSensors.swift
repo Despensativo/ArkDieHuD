@@ -235,6 +235,24 @@ public actor SwiftSensors {
         await NetworkQualityMonitor.shared.ensureUDPProbingEnabled()
     }
 
+    /// Enable or disable prioritizing wired USB Ethernet adapters when detecting active LAN IP/gateway.
+    public func setNetworkUseUSBEthernet(_ enabled: Bool) async {
+        await NetworkQualityMonitor.shared.setUseUSBEthernet(enabled)
+    }
+
+    public func getNetworkUseUSBEthernet() async -> Bool {
+        await NetworkQualityMonitor.shared.getUseUSBEthernet()
+    }
+
+    /// Enable or disable IPv6 resolution and ICMPv6/UDP/TCP probes over IPv6 (disabled by default).
+    public func setNetworkUseIPv6Probes(_ enabled: Bool) async {
+        await NetworkQualityMonitor.shared.setUseIPv6Probes(enabled)
+    }
+
+    public func getNetworkUseIPv6Probes() async -> Bool {
+        await NetworkQualityMonitor.shared.getUseIPv6Probes()
+    }
+
     /// Export full network diagnostics summary, incident timeline, and sample history as CSV
     public func exportNetworkDiagnosticsCSV() async -> String {
         await NetworkQualityMonitor.shared.exportDiagnosticsCSV()

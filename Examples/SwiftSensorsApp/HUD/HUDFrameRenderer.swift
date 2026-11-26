@@ -196,6 +196,9 @@ enum HUDFrameRenderer {
         let endpointText: String
         if let ip = snapshot.network.route.localIPv4 {
             endpointText = "\(ip):8787"
+        } else if TelemetryWebServer.loadAllowIPv6(),
+                  let ipv6 = snapshot.network.route.localIPv6 {
+            endpointText = "[\(ipv6)]:8787"
         } else {
             endpointText = L10n.tr("PORT :8787")
         }

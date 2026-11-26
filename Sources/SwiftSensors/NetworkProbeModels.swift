@@ -57,7 +57,17 @@ public struct NetworkProbeTarget: Codable, Sendable, Identifiable, Equatable {
     }
 
     public static let cloudflare = NetworkProbeTarget(name: "Cloudflare (1.1.1.1)", host: "1.1.1.1", port: 53)
+    public static let cloudflareIPv6 = NetworkProbeTarget(
+        name: "Cloudflare IPv6 (2606:4700::1111)",
+        host: "2606:4700:4700::1111",
+        port: 53
+    )
     public static let google = NetworkProbeTarget(name: "Google (8.8.8.8)", host: "8.8.8.8", port: 53)
+    public static let googleIPv6 = NetworkProbeTarget(
+        name: "Google IPv6 (2001:4860::8888)",
+        host: "2001:4860:4860::8888",
+        port: 53
+    )
     public static let awsSaoPaulo = NetworkProbeTarget(
         name: "AWS São Paulo",
         host: "ec2.sa-east-1.amazonaws.com",
@@ -73,28 +83,47 @@ public struct NetworkProbeTarget: Codable, Sendable, Identifiable, Equatable {
         .steam,
         .riot,
     ]
+
+    public static let ipv6AwareTargets: [NetworkProbeTarget] = [
+        .cloudflare,
+        .cloudflareIPv6,
+        .google,
+        .googleIPv6,
+        .awsSaoPaulo,
+        .steam,
+        .riot,
+    ]
 }
 
-/// Active iPadOS route summary combining primary interface, VPN tunnel, and gateway IP.
+/// Active iPadOS route summary combining primary interface, USB Ethernet, IPv6, VPN tunnel, and gateway IP.
 public struct NetworkRouteInfo: Codable, Sendable, Equatable {
     public let interfaceKind: String
     public let isVPNActive: Bool
     public let vpnInterfaceName: String?
     public let localIPv4: String?
     public let detectedGatewayIP: String?
+    public let activeInterfaceName: String?
+    public let usbEthernetIPv4: String?
+    public let localIPv6: String?
 
     public init(
         interfaceKind: String,
         isVPNActive: Bool,
         vpnInterfaceName: String? = nil,
         localIPv4: String? = nil,
-        detectedGatewayIP: String? = nil
+        detectedGatewayIP: String? = nil,
+        activeInterfaceName: String? = nil,
+        usbEthernetIPv4: String? = nil,
+        localIPv6: String? = nil
     ) {
         self.interfaceKind = interfaceKind
         self.isVPNActive = isVPNActive
         self.vpnInterfaceName = vpnInterfaceName
         self.localIPv4 = localIPv4
         self.detectedGatewayIP = detectedGatewayIP
+        self.activeInterfaceName = activeInterfaceName
+        self.usbEthernetIPv4 = usbEthernetIPv4
+        self.localIPv6 = localIPv6
     }
 
     public static let unknown = NetworkRouteInfo(
@@ -102,7 +131,10 @@ public struct NetworkRouteInfo: Codable, Sendable, Equatable {
         isVPNActive: false,
         vpnInterfaceName: nil,
         localIPv4: nil,
-        detectedGatewayIP: nil
+        detectedGatewayIP: nil,
+        activeInterfaceName: nil,
+        usbEthernetIPv4: nil,
+        localIPv6: nil
     )
 
     public var summaryLabel: String {

@@ -17,6 +17,19 @@ actor TelemetryWebServer {
     static let shared = TelemetryWebServer()
     static let defaultPort: UInt16 = 8787
     static let defaultsKey = "SwiftSensors.remoteWebServerEnabled.v1"
+    static let allowIPv6DefaultsKey = "SwiftSensors.webServerAllowIPv6.v1"
+    static let allowUSBEthernetDefaultsKey = "SwiftSensors.webServerAllowUSBEthernet.v1"
+
+    nonisolated static func loadAllowIPv6() -> Bool {
+        UserDefaults.standard.bool(forKey: Self.allowIPv6DefaultsKey)
+    }
+
+    nonisolated static func loadAllowUSBEthernet() -> Bool {
+        guard UserDefaults.standard.object(forKey: Self.allowUSBEthernetDefaultsKey) != nil else {
+            return true
+        }
+        return UserDefaults.standard.bool(forKey: Self.allowUSBEthernetDefaultsKey)
+    }
 
     private let listenerQueue = DispatchQueue(label: "com.arkdiehud.telemetry.webserver", qos: .utility)
     private var listener: NWListener?
@@ -24,6 +37,9 @@ actor TelemetryWebServer {
     private(set) var activePort: UInt16 = TelemetryWebServer.defaultPort
     private var latestSnapshot: TelemetrySnapshot = .placeholder
     private var shouldBeRunning: Bool = false
+    private var allowIPv6: Bool = TelemetryWebServer.loadAllowIPv6()
+    private var allowUSBEthernet: Bool = TelemetryWebServer.loadAllowUSBEthernet()
+    private var listenerGeneration: UInt64 = 0
     private var restartTask: Task<Void, Never>?
 
     private init() {}
@@ -35,29 +51,77 @@ actor TelemetryWebServer {
     func ensureRunningIfEnabled() {
         guard self.shouldBeRunning else { return }
         if !self.isListening || self.listener == nil {
-            self.start(port: self.activePort)
+            self.start(
+                port: self.activePort,
+                allowIPv6: self.allowIPv6,
+                allowUSBEthernet: self.allowUSBEthernet
+            )
         }
     }
 
-    func start(port: UInt16 = TelemetryWebServer.defaultPort) {
+    func reconfigure(allowIPv6: Bool, allowUSBEthernet: Bool) async {
+        let changed = (self.allowIPv6 != allowIPv6) || (self.allowUSBEthernet != allowUSBEthernet)
+        self.allowIPv6 = allowIPv6
+        self.allowUSBEthernet = allowUSBEthernet
+        guard changed, self.shouldBeRunning else { return }
+
+        self.listenerGeneration &+= 1
+        let gen = self.listenerGeneration
+        self.restartTask?.cancel()
+        self.restartTask = nil
+        self.listener?.cancel()
+        self.listener = nil
+        self.isListening = false
+
+        // Wait briefly for the previous NWListener socket to finish tearing down in the kernel.
+        try? await Task.sleep(for: .milliseconds(120))
+        guard gen == self.listenerGeneration, self.shouldBeRunning, self.listener == nil else { return }
+        self.start(
+            port: self.activePort,
+            allowIPv6: self.allowIPv6,
+            allowUSBEthernet: self.allowUSBEthernet
+        )
+    }
+
+    func start(
+        port: UInt16 = TelemetryWebServer.defaultPort,
+        allowIPv6: Bool? = nil,
+        allowUSBEthernet: Bool? = nil
+    ) {
         self.shouldBeRunning = true
+        self.allowIPv6 = allowIPv6 ?? Self.loadAllowIPv6()
+        self.allowUSBEthernet = allowUSBEthernet ?? Self.loadAllowUSBEthernet()
         self.restartTask?.cancel()
         self.restartTask = nil
         guard self.listener == nil, let nwPort = NWEndpoint.Port(rawValue: port) else { return }
 
+        self.listenerGeneration &+= 1
+        let generation = self.listenerGeneration
+
         do {
             let params = NWParameters.tcp
             params.allowLocalEndpointReuse = true
+            if !self.allowIPv6,
+               let ipOptions = params.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options {
+                // Safe default: bind strictly to IPv4 so global IPv6 cannot expose :8787 to WAN.
+                ipOptions.version = .v4
+            }
+            if !self.allowUSBEthernet {
+                params.prohibitedInterfaceTypes = [.wiredEthernet, .cellular]
+            } else {
+                params.prohibitedInterfaceTypes = [.cellular]
+            }
+
             let newListener = try NWListener(using: params, on: nwPort)
 
             newListener.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    Task { await self.markListening(true, port: port) }
+                    Task { await self.markListening(true, port: port, generation: generation) }
                 case .failed:
-                    Task { await self.handleListenerFailure(port: port) }
+                    Task { await self.handleListenerFailure(port: port, generation: generation) }
                 case .cancelled:
-                    Task { await self.markListening(false, port: port) }
+                    Task { await self.markListening(false, port: port, generation: generation) }
                 default:
                     break
                 }
@@ -77,6 +141,7 @@ actor TelemetryWebServer {
     }
 
     func stop() {
+        self.listenerGeneration &+= 1
         self.shouldBeRunning = false
         self.restartTask?.cancel()
         self.restartTask = nil
@@ -85,12 +150,14 @@ actor TelemetryWebServer {
         self.isListening = false
     }
 
-    private func markListening(_ active: Bool, port: UInt16) {
+    private func markListening(_ active: Bool, port: UInt16, generation: UInt64) {
+        guard generation == self.listenerGeneration else { return }
         self.isListening = active
         self.activePort = port
     }
 
-    private func handleListenerFailure(port: UInt16) {
+    private func handleListenerFailure(port: UInt16, generation: UInt64) {
+        guard generation == self.listenerGeneration else { return }
         self.listener?.cancel()
         self.listener = nil
         self.isListening = false
@@ -344,8 +411,13 @@ actor TelemetryWebServer {
             )
 
         case "/download/metal-hud-windows.bat":
+            let fallbackIPv6 = self.allowIPv6
+                ? self.latestSnapshot.network.route.localIPv6.map { "[\($0)]:\(self.activePort)" }
+                : nil
             let fallbackHost = self.latestSnapshot.network.route.localIPv4
-                .map { "\($0):\(self.activePort)" } ?? "127.0.0.1:\(self.activePort)"
+                .map { "\($0):\(self.activePort)" }
+                ?? fallbackIPv6
+                ?? "127.0.0.1:\(self.activePort)"
             let effectiveHost = hostHeader ?? fallbackHost
             let elementsParam = components?.queryItems?.first(where: { $0.name == "elements" })?.value
             let alignParam = components?.queryItems?.first(where: { $0.name == "align" })?.value

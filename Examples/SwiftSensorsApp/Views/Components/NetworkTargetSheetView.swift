@@ -22,7 +22,12 @@ struct NetworkTargetSheetView: View {
     @State private var autoDetectGateway: Bool = true
     @State private var customGatewayText: String = ""
     @State private var selectedProtocol: NetworkProbeProtocol = .auto
+    @State private var useIPv6Probes: Bool = false
     @State private var saveTrigger: Int = 0
+
+    private var availablePresets: [NetworkProbeTarget] {
+        self.useIPv6Probes ? NetworkProbeTarget.ipv6AwareTargets : NetworkProbeTarget.defaultTargets
+    }
 
     private var parsedCustomPort: UInt16? {
         guard let value = UInt16(self.customPortText.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -54,7 +59,7 @@ struct NetworkTargetSheetView: View {
                     Toggle(L10n.tr("Use custom server"), isOn: self.$useCustomTarget)
 
                     if !self.useCustomTarget {
-                        ForEach(NetworkProbeTarget.defaultTargets) { preset in
+                        ForEach(self.availablePresets) { preset in
                             Button {
                                 self.selectedPreset = preset
                             } label: {
@@ -124,6 +129,18 @@ struct NetworkTargetSheetView: View {
                 }
 
                 Section(
+                    header: Text(L10n.tr("IP Protocol Version")),
+                    footer: Text(L10n.tr("Disabled by default for security and local IPv4 consistency. Turn on to allow IPv6 DNS resolution and ICMPv6/UDP/TCP probes."))
+                ) {
+                    Toggle(L10n.tr("Use IPv6 in Network Probes"), isOn: self.$useIPv6Probes)
+                        .onChange(of: self.useIPv6Probes) { _, enabled in
+                            if !enabled && self.selectedPreset.host.contains(":") {
+                                self.selectedPreset = .cloudflare
+                            }
+                        }
+                }
+
+                Section(
                     header: Text(L10n.tr("Probe Protocol")),
                     footer: Text(L10n.tr("Simultaneous tests ICMP, UDP (DNS 53), and TCP alongside the router (~0.6 KB/s). If a custom target does not use port 53, the UDP probe falls back to 1.1.1.1:53."))
                 ) {
@@ -155,6 +172,9 @@ struct NetworkTargetSheetView: View {
             }
             .onAppear {
                 self.loadInitialState()
+            }
+            .task {
+                self.useIPv6Probes = await SwiftSensors.shared.getNetworkUseIPv6Probes()
             }
         }
     }
@@ -192,9 +212,11 @@ struct NetworkTargetSheetView: View {
             : self.customGatewayText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let proto = self.selectedProtocol
+        let allowIPv6 = self.useIPv6Probes
         self.saveTrigger += 1
 
         Task {
+            await SwiftSensors.shared.setNetworkUseIPv6Probes(allowIPv6)
             await SwiftSensors.shared.setNetworkProbeProtocol(proto)
             await SwiftSensors.shared.setNetworkGatewayHost(gatewayOverride)
             await SwiftSensors.shared.setNetworkProbeTarget(finalTarget)

@@ -74,7 +74,7 @@ Por padrão, o script detecta automaticamente via `xcrun devicectl list devices 
 ### A) Painel Web Ao Vivo (`http://<IP_DO_IPAD>:8787`) — Sem Overlay PiP
 
 No **ArkDieHuD** (iPad), ative **Monitorar no PC/Mac (sem PiP na tela)**:
-- **Via Wi-Fi (mesma rede):** abra `http://<IP_DO_IPAD>:8787` em qualquer navegador do Windows/Linux/Mac para acompanhar todos os sensores, gráficos de CPU/GPU/Watts, latência ICMP/UDP/Roteador, drops e baixar o CSV — sem exibir o PiP por cima do jogo.
+- **Via Wi-Fi ou Placa de Rede USB-C Ethernet (mesma rede LAN):** abra `http://<IP_DO_IPAD>:8787` em qualquer navegador do Windows/Linux/Mac para acompanhar todos os sensores, gráficos de CPU/GPU/Watts, latência ICMP/UDP/Roteador, drops e baixar o CSV — sem exibir o PiP por cima do jogo. *(Os toggles **Usar adaptador de rede USB (LAN)** [ligado por padrão] e **Permitir IPv6 no Painel Web** / **Usar IPv6 nas sondas de rede** [desligados por padrão por segurança] ficam disponíveis no app.)*
 - **Via Cabo USB:** faça o túnel da porta `8787` e acesse localmente em `http://127.0.0.1:8787`:
   ```bash
   # Instalar uma vez no Mac (libimobiledevice) ou usar ferramenta equivalente no Windows

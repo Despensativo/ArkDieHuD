@@ -149,10 +149,12 @@ struct HUDDashboardSection: View {
     }
 
     private var remoteMonitorCard: some View {
-        let localIP = self.hudController.latestSnapshot.network.route.localIPv4
-        let urlString = localIP.map { "http://\($0):\(TelemetryWebServer.defaultPort)" }
+        let route = self.hudController.latestSnapshot.network.route
+        let ipv4URL = route.localIPv4.map { "http://\($0):\(TelemetryWebServer.defaultPort)" }
+        let ipv6URL = route.localIPv6.map { "http://[\($0)]:\(TelemetryWebServer.defaultPort)" }
+        let primaryURL = ipv4URL ?? (self.hudController.allowIPv6WebServer ? ipv6URL : nil)
 
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label(L10n.tr("Live Web Dashboard"), systemImage: "desktopcomputer")
                     .font(.subheadline.bold())
@@ -160,9 +162,9 @@ struct HUDDashboardSection: View {
 
                 Spacer()
 
-                if let urlString {
+                if let primaryURL {
                     Button {
-                        UIPasteboard.general.string = urlString
+                        UIPasteboard.general.string = primaryURL
                         self.copiedURLTrigger += 1
                     } label: {
                         Label(L10n.tr("Copy URL"), systemImage: "doc.on.doc")
@@ -174,10 +176,77 @@ struct HUDDashboardSection: View {
                 }
             }
 
-            Text(urlString ?? L10n.fmt("Connect to Wi-Fi to view IP (or use USB on port %lld)", TelemetryWebServer.defaultPort))
+            Text(primaryURL ?? L10n.fmt("Connect to Wi-Fi or USB Ethernet to view IP (or use USB tunnel on port %lld)", TelemetryWebServer.defaultPort))
                 .font(.subheadline.bold())
                 .monospacedDigit()
                 .foregroundStyle(.primary)
+
+            if let iface = route.activeInterfaceName {
+                HStack(spacing: 6) {
+                    Image(systemName: route.interfaceKind == "Ethernet" ? "cable.connector" : "wifi")
+                        .font(.caption)
+                    Text(
+                        route.interfaceKind == "Ethernet"
+                            ? L10n.fmt("USB Ethernet active (%@)", iface)
+                            : L10n.fmt("Interface: %@ (%@)", route.interfaceKind, iface)
+                    )
+                }
+                .font(.caption)
+                .foregroundStyle(route.interfaceKind == "Ethernet" ? .green : .secondary)
+            }
+
+            if !self.hudController.allowUSBEthernetNetwork, let usbIP = route.usbEthernetIPv4 {
+                Text(L10n.fmt("USB Ethernet detected (%@) — disabled below", usbIP))
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.orange)
+            }
+
+            Toggle(L10n.tr("Use USB Ethernet adapter (LAN)"), isOn: self.$hudController.allowUSBEthernetNetwork)
+                .font(.footnote)
+
+            Toggle(L10n.tr("Allow IPv6 on Web Dashboard"), isOn: self.$hudController.allowIPv6WebServer)
+                .font(.footnote)
+
+            if self.hudController.allowIPv6WebServer {
+                Label(
+                    L10n.tr("Warning: public IPv6 may expose :8787 outside your LAN depending on your router firewall."),
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .font(.caption)
+                .foregroundStyle(.orange)
+
+                if let ipv6URL {
+                    HStack(spacing: 8) {
+                        Text(ipv6URL)
+                            .font(.caption.bold())
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer()
+                        Button {
+                            UIPasteboard.general.string = ipv6URL
+                            self.copiedURLTrigger += 1
+                        } label: {
+                            Label(L10n.tr("Copy IPv6"), systemImage: "doc.on.doc")
+                                .font(.caption2.bold())
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                    }
+                } else {
+                    Text(L10n.tr("No routable IPv6 address detected on the active network."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Label(
+                    L10n.tr("Safe default: IPv4 / local USB only (IPv6 port disabled)."),
+                    systemImage: "lock.shield"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
 
             Toggle(L10n.tr("Stealth PiP (hide at screen edge)"), isOn: self.$hudController.useStealthPiPForPC)
                 .font(.footnote)

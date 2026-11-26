@@ -70,10 +70,11 @@ Activa **Grabar logs de telemetría (24h)** para guardar métricas cada 15s, con
 ## 5. Monitor en PC/Mac (`:8787`) + Modo PiP Discreto
 
 1. Activa **Monitorear en PC/Mac (sin PiP en pantalla)**.
-2. Abre `http://<IP_DEL_IPAD>:8787` en tu navegador vía Wi-Fi, o usa cable USB:
+2. Abre `http://<IP_DEL_IPAD>:8787` en tu navegador vía Wi-Fi o **adaptador de red USB-C Ethernet** (con **Usar adaptador de red USB (LAN)** activado por defecto), o usa cable USB:
    ```bash
    iproxy 8787 8787   # abre http://127.0.0.1:8787
    ```
+   - **Toggles de Seguridad IPv6 (desactivados por defecto):** tanto **Permitir IPv6 en el Panel Web** como **Usar IPv6 en sondas de red** vienen en **OFF** para no abrir `:8787` en IPv6 pública salvo que los actives manualmente.
 3. Si usas chat de voz/micrófono en juegos, mantén activado **PiP discreto (ocultar en el borde)**, abre el PiP y **arrastra la píldora hacia el borde lateral** para dejar la pantalla limpia mientras el monitor en PC sigue activo.
 
 ---

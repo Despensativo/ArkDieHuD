@@ -88,8 +88,10 @@ Tap **Network & Packet Log** (or the **Ping / Packet Loss** tile) to open the fu
 Want to see CPU/GPU thermals, Watts, latency charts, and packet drops on a second monitor (**PC / Mac / Laptop**) while keeping your iPad screen **completely clear**?
 
 1. On your iPad inside **ArkDieHuD**, toggle ON **Monitor on PC/Mac (no screen PiP)**.
-2. **Option 1 — Over Wi-Fi (Same Network):**
+2. **Option 1 — Over Wi-Fi or USB-C Ethernet Adapter (Same LAN):**
    Open `http://<IPAD_IP>:8787` (shown right inside the card with a **Copy URL** button) in any desktop/mobile browser.
+   - **USB-C Ethernet NICs:** supported automatically when **Use USB Ethernet adapter (LAN)** is enabled (default ON); toggle it OFF anytime to prefer Wi-Fi.
+   - **IPv6 Security Toggles (OFF by default):** both **Allow IPv6 on Web Dashboard** (card toggle) and **Use IPv6 in Network Probes** (Network Target sheet) default to **OFF** so `:8787` never binds a public/global IPv6 socket unless you explicitly opt in behind your router firewall.
 3. **Option 2 — Over USB Cable (Zero Wi-Fi Dependency):**
    ```bash
    brew install libimobiledevice   # Mac (one-time)

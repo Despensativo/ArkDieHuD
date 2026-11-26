@@ -47,9 +47,15 @@ final class PiPHUDController: NSObject {
             guard oldValue != self.isRemoteWebServerEnabled else { return }
             let enabled = self.isRemoteWebServerEnabled
             UserDefaults.standard.set(enabled, forKey: TelemetryWebServer.defaultsKey)
+            let allowV6 = self.allowIPv6WebServer
+            let allowUSB = self.allowUSBEthernetNetwork
             Task {
                 if enabled {
-                    await TelemetryWebServer.shared.start(port: TelemetryWebServer.defaultPort)
+                    await TelemetryWebServer.shared.start(
+                        port: TelemetryWebServer.defaultPort,
+                        allowIPv6: allowV6,
+                        allowUSBEthernet: allowUSB
+                    )
                 } else {
                     await TelemetryWebServer.shared.stop()
                 }
@@ -63,6 +69,37 @@ final class PiPHUDController: NSObject {
                     ? L10n.tr("PC/Mac server active without PiP")
                     : L10n.tr("Ready to overlay on screen")
             }
+        }
+    }
+
+    var allowIPv6WebServer: Bool = TelemetryWebServer.loadAllowIPv6() {
+        didSet {
+            guard oldValue != self.allowIPv6WebServer else { return }
+            let allowV6 = self.allowIPv6WebServer
+            let allowUSB = self.allowUSBEthernetNetwork
+            UserDefaults.standard.set(allowV6, forKey: TelemetryWebServer.allowIPv6DefaultsKey)
+            Task {
+                await TelemetryWebServer.shared.reconfigure(allowIPv6: allowV6, allowUSBEthernet: allowUSB)
+            }
+            self.displayLayer?.flush()
+            self.renderCurrentSnapshot()
+            self.pipController?.invalidatePlaybackState()
+        }
+    }
+
+    var allowUSBEthernetNetwork: Bool = TelemetryWebServer.loadAllowUSBEthernet() {
+        didSet {
+            guard oldValue != self.allowUSBEthernetNetwork else { return }
+            let allowV6 = self.allowIPv6WebServer
+            let allowUSB = self.allowUSBEthernetNetwork
+            UserDefaults.standard.set(allowUSB, forKey: TelemetryWebServer.allowUSBEthernetDefaultsKey)
+            Task {
+                await SwiftSensors.shared.setNetworkUseUSBEthernet(allowUSB)
+                await TelemetryWebServer.shared.reconfigure(allowIPv6: allowV6, allowUSBEthernet: allowUSB)
+            }
+            self.displayLayer?.flush()
+            self.renderCurrentSnapshot()
+            self.pipController?.invalidatePlaybackState()
         }
     }
 
@@ -135,9 +172,18 @@ final class PiPHUDController: NSObject {
                 await SwiftSensors.shared.ensureNetworkUDPProbingEnabled()
             }
         }
+        let allowUSB = self.allowUSBEthernetNetwork
+        let allowV6 = self.allowIPv6WebServer
+        Task {
+            await SwiftSensors.shared.setNetworkUseUSBEthernet(allowUSB)
+        }
         if self.isRemoteWebServerEnabled {
             Task {
-                await TelemetryWebServer.shared.start(port: TelemetryWebServer.defaultPort)
+                await TelemetryWebServer.shared.start(
+                    port: TelemetryWebServer.defaultPort,
+                    allowIPv6: allowV6,
+                    allowUSBEthernet: allowUSB
+                )
             }
             self.startSilentKeepAlive()
             self.statusText = L10n.tr("PC/Mac server active without PiP")

@@ -7,21 +7,31 @@ private final class NetworkPathObserver: @unchecked Sendable {
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.swiftsensors.network.path", qos: .utility)
 
-    func start(onUpdate: @escaping @Sendable (String) -> Void) {
+    func start(onUpdate: @escaping @Sendable (String, Set<String>, Set<String>) -> Void) {
         self.monitor.pathUpdateHandler = { path in
             let kind: String
             if path.status != .satisfied {
                 kind = "Desconectado"
+            } else if path.usesInterfaceType(.wiredEthernet) {
+                kind = "Ethernet"
             } else if path.usesInterfaceType(.wifi) {
                 kind = "Wi-Fi"
             } else if path.usesInterfaceType(.cellular) {
                 kind = "Celular"
-            } else if path.usesInterfaceType(.wiredEthernet) {
-                kind = "Ethernet"
             } else {
                 kind = "Outra Rede"
             }
-            onUpdate(kind)
+            let wiredNames = Set(
+                path.availableInterfaces
+                    .filter { $0.type == .wiredEthernet }
+                    .map(\.name)
+            )
+            let wifiNames = Set(
+                path.availableInterfaces
+                    .filter { $0.type == .wifi }
+                    .map(\.name)
+            )
+            onUpdate(kind, wiredNames, wifiNames)
         }
         self.monitor.start(queue: self.queue)
     }
@@ -45,6 +55,8 @@ public actor NetworkQualityMonitor {
         static let targetJSON = "SwiftSensors.net.target.json"
         static let customGateway = "SwiftSensors.net.customGateway"
         static let probeProtocol = "SwiftSensors.net.protocol"
+        static let useUSBEthernet = "SwiftSensors.net.useUSBEthernet.v1"
+        static let useIPv6Probes = "SwiftSensors.net.useIPv6Probes.v1"
     }
 
     private struct ProtocolTrackState {
@@ -77,6 +89,8 @@ public actor NetworkQualityMonitor {
     private var currentTarget: NetworkProbeTarget
     private var customGatewayHost: String?
     private var protocolPreference: NetworkProbeProtocol
+    private var useUSBEthernet: Bool
+    private var useIPv6Probes: Bool
     private var activeTransport: NetworkProbeTransportUsed = .multi
 
     private var isRunning: Bool = false
@@ -126,6 +140,8 @@ public actor NetworkQualityMonitor {
 
     // Route & VPN state
     private var pathInterfaceKind: String = "Wi-Fi"
+    private var wiredInterfaceNames: Set<String> = []
+    private var wifiInterfaceNames: Set<String> = []
     private var lastRouteInfo: NetworkRouteInfo = .unknown
     private var hasInitializedRoute: Bool = false
 
@@ -142,6 +158,8 @@ public actor NetworkQualityMonitor {
         self.currentTarget = Self.loadSavedTarget() ?? .cloudflare
         self.customGatewayHost = Self.loadSavedCustomGateway()
         self.protocolPreference = Self.loadSavedProtocol()
+        self.useUSBEthernet = Self.loadSavedBool(DefaultsKey.useUSBEthernet, defaultValue: true)
+        self.useIPv6Probes = Self.loadSavedBool(DefaultsKey.useIPv6Probes, defaultValue: false)
 
         Task { [self] in
             await self.start()
@@ -189,6 +207,26 @@ public actor NetworkQualityMonitor {
         }
     }
 
+    public func setUseUSBEthernet(_ enabled: Bool) {
+        self.useUSBEthernet = enabled
+        UserDefaults.standard.set(enabled, forKey: DefaultsKey.useUSBEthernet)
+    }
+
+    public func getUseUSBEthernet() -> Bool {
+        self.useUSBEthernet
+    }
+
+    public func setUseIPv6Probes(_ enabled: Bool) {
+        self.useIPv6Probes = enabled
+        UserDefaults.standard.set(enabled, forKey: DefaultsKey.useIPv6Probes)
+        ICMPProber.clearDNSCache()
+        self.resetTargetProbeState()
+    }
+
+    public func getUseIPv6Probes() -> Bool {
+        self.useIPv6Probes
+    }
+
     public func start() {
         guard !self.isRunning else { return }
         self.isRunning = true
@@ -198,9 +236,9 @@ public actor NetworkQualityMonitor {
         self.lastTotalOutBytes = initialOut
         self.lastThroughputTimestamp = Date()
 
-        self.pathObserver.start { [weak self] kind in
+        self.pathObserver.start { [weak self] kind, wiredNames, wifiNames in
             Task { [weak self] in
-                await self?.updatePathInterfaceKind(kind)
+                await self?.updatePathState(kind: kind, wiredInterfaces: wiredNames, wifiInterfaces: wifiNames)
             }
         }
 
@@ -421,13 +459,34 @@ public actor NetworkQualityMonitor {
         self.lastTotalOutBytes = curOut
         self.lastThroughputTimestamp = now
 
-        let netIf = ICMPProber.inspectLocalInterfaces()
+        let netIf = ICMPProber.inspectLocalInterfaces(
+            wiredInterfaceNames: self.wiredInterfaceNames,
+            wifiInterfaceNames: self.wifiInterfaceNames,
+            isWiredPath: self.pathInterfaceKind == "Ethernet",
+            preferUSBEthernet: self.useUSBEthernet
+        )
+        let effectiveInterfaceKind: String
+        if !self.useUSBEthernet,
+           self.pathInterfaceKind == "Ethernet",
+           let iface = netIf.activeInterfaceName,
+           !self.wiredInterfaceNames.contains(iface) {
+            effectiveInterfaceKind = "Wi-Fi"
+        } else if self.useUSBEthernet,
+                  netIf.usbEthernetIPv4 != nil,
+                  netIf.activeInterfaceName != nil {
+            effectiveInterfaceKind = "Ethernet"
+        } else {
+            effectiveInterfaceKind = self.pathInterfaceKind
+        }
         let updatedRoute = NetworkRouteInfo(
-            interfaceKind: self.pathInterfaceKind,
+            interfaceKind: effectiveInterfaceKind,
             isVPNActive: netIf.vpnInterface != nil,
             vpnInterfaceName: netIf.vpnInterface,
             localIPv4: netIf.localIPv4,
-            detectedGatewayIP: netIf.detectedGatewayIP
+            detectedGatewayIP: netIf.detectedGatewayIP,
+            activeInterfaceName: netIf.activeInterfaceName,
+            usbEthernetIPv4: netIf.usbEthernetIPv4,
+            localIPv6: netIf.localIPv6
         )
         self.recordRouteTransitionIfNeeded(updatedRoute, at: now)
         self.lastRouteInfo = updatedRoute
@@ -616,17 +675,40 @@ public actor NetworkQualityMonitor {
     }
 
     private func resolvedUDPTargetHost() -> String {
-        self.currentTarget.port == 53 ? self.currentTarget.host : "1.1.1.1"
+        if self.currentTarget.port == 53 {
+            return self.currentTarget.host
+        }
+        if self.useIPv6Probes && self.currentTarget.host.contains(":") {
+            return NetworkProbeTarget.cloudflareIPv6.host
+        }
+        return "1.1.1.1"
     }
 
     private func probeExternalProtocols(sequence: UInt16) async -> ExternalProbeOutcome {
         let udpHost = self.resolvedUDPTargetHost()
+        let allowIPv6 = self.useIPv6Probes
 
         switch self.protocolPreference {
         case .simultaneous:
-            async let icmpProbe = ICMPProber.pingICMP(host: self.currentTarget.host, sequence: sequence, timeout: 0.9)
-            async let udpProbe = ICMPProber.pingUDPDNS(host: udpHost, port: 53, transactionID: sequence, timeout: 0.9)
-            async let tcpProbe = ICMPProber.pingTCP(host: self.currentTarget.host, port: self.currentTarget.port, timeout: 0.9)
+            async let icmpProbe = ICMPProber.pingICMP(
+                host: self.currentTarget.host,
+                sequence: sequence,
+                timeout: 0.9,
+                allowIPv6: allowIPv6
+            )
+            async let udpProbe = ICMPProber.pingUDPDNS(
+                host: udpHost,
+                port: 53,
+                transactionID: sequence,
+                timeout: 0.9,
+                allowIPv6: allowIPv6
+            )
+            async let tcpProbe = ICMPProber.pingTCP(
+                host: self.currentTarget.host,
+                port: self.currentTarget.port,
+                timeout: 0.9,
+                allowIPv6: allowIPv6
+            )
 
             let icmpRTT = await icmpProbe
             let udpRTT = await udpProbe
@@ -646,7 +728,12 @@ public actor NetworkQualityMonitor {
             )
 
         case .icmp:
-            let rtt = await ICMPProber.pingICMP(host: self.currentTarget.host, sequence: sequence, timeout: 1.0)
+            let rtt = await ICMPProber.pingICMP(
+                host: self.currentTarget.host,
+                sequence: sequence,
+                timeout: 1.0,
+                allowIPv6: allowIPv6
+            )
             return ExternalProbeOutcome(
                 primaryRTTMs: rtt,
                 isPrimaryLost: rtt == nil,
@@ -660,7 +747,13 @@ public actor NetworkQualityMonitor {
             )
 
         case .udp:
-            let rtt = await ICMPProber.pingUDPDNS(host: udpHost, port: 53, transactionID: sequence, timeout: 1.0)
+            let rtt = await ICMPProber.pingUDPDNS(
+                host: udpHost,
+                port: 53,
+                transactionID: sequence,
+                timeout: 1.0,
+                allowIPv6: allowIPv6
+            )
             return ExternalProbeOutcome(
                 primaryRTTMs: rtt,
                 isPrimaryLost: rtt == nil,
@@ -677,7 +770,8 @@ public actor NetworkQualityMonitor {
             let rtt = await ICMPProber.pingTCP(
                 host: self.currentTarget.host,
                 port: self.currentTarget.port,
-                timeout: 1.0
+                timeout: 1.0,
+                allowIPv6: allowIPv6
             )
             return ExternalProbeOutcome(
                 primaryRTTMs: rtt,
@@ -696,7 +790,8 @@ public actor NetworkQualityMonitor {
                 let rtt = await ICMPProber.pingTCP(
                     host: self.currentTarget.host,
                     port: self.currentTarget.port,
-                    timeout: 1.0
+                    timeout: 1.0,
+                    allowIPv6: allowIPv6
                 )
                 return ExternalProbeOutcome(
                     primaryRTTMs: rtt,
@@ -714,7 +809,8 @@ public actor NetworkQualityMonitor {
             if let icmpRTT = await ICMPProber.pingICMP(
                 host: self.currentTarget.host,
                 sequence: sequence,
-                timeout: 1.0
+                timeout: 1.0,
+                allowIPv6: allowIPv6
             ) {
                 self.consecutiveICMPFailures = 0
                 return ExternalProbeOutcome(
@@ -735,7 +831,8 @@ public actor NetworkQualityMonitor {
                 if let tcpRTT = await ICMPProber.pingTCP(
                     host: self.currentTarget.host,
                     port: self.currentTarget.port,
-                    timeout: 0.9
+                    timeout: 0.9,
+                    allowIPv6: allowIPv6
                 ) {
                     self.autoFallbackToTCP = true
                     return ExternalProbeOutcome(
@@ -808,24 +905,25 @@ public actor NetworkQualityMonitor {
         guard let host, !host.isEmpty else {
             return (nil, false)
         }
+        let allowIPv6 = self.useIPv6Probes
 
         if self.gatewayUseTCPFallback {
-            let tcp = await ICMPProber.pingTCP(host: host, port: 80, timeout: 0.85)
+            let tcp = await ICMPProber.pingTCP(host: host, port: 80, timeout: 0.85, allowIPv6: allowIPv6)
             if tcp != nil {
                 return (tcp, true)
             }
-            let dnsFallback = await ICMPProber.pingTCP(host: host, port: 53, timeout: 0.5)
+            let dnsFallback = await ICMPProber.pingTCP(host: host, port: 53, timeout: 0.5, allowIPv6: allowIPv6)
             return (dnsFallback, true)
         }
 
-        if let icmp = await ICMPProber.pingICMP(host: host, sequence: sequence, timeout: 0.85) {
+        if let icmp = await ICMPProber.pingICMP(host: host, sequence: sequence, timeout: 0.85, allowIPv6: allowIPv6) {
             self.gatewayICMPFailures = 0
             return (icmp, true)
         }
 
         self.gatewayICMPFailures += 1
         if self.gatewayICMPFailures >= 3 {
-            if let tcp = await ICMPProber.pingTCP(host: host, port: 80, timeout: 0.5) {
+            if let tcp = await ICMPProber.pingTCP(host: host, port: 80, timeout: 0.5, allowIPv6: allowIPv6) {
                 self.gatewayUseTCPFallback = true
                 return (tcp, true)
             }
@@ -850,8 +948,10 @@ public actor NetworkQualityMonitor {
         self.cachedP99Ms = nil
     }
 
-    private func updatePathInterfaceKind(_ kind: String) {
+    private func updatePathState(kind: String, wiredInterfaces: Set<String>, wifiInterfaces: Set<String>) {
         self.pathInterfaceKind = kind
+        self.wiredInterfaceNames = wiredInterfaces
+        self.wifiInterfaceNames = wifiInterfaces
     }
 
     private func recordRouteTransitionIfNeeded(_ route: NetworkRouteInfo, at date: Date) {
@@ -953,5 +1053,12 @@ public actor NetworkQualityMonitor {
             return .simultaneous
         }
         return parsed
+    }
+
+    private static func loadSavedBool(_ key: String, defaultValue: Bool) -> Bool {
+        guard UserDefaults.standard.object(forKey: key) != nil else {
+            return defaultValue
+        }
+        return UserDefaults.standard.bool(forKey: key)
     }
 }

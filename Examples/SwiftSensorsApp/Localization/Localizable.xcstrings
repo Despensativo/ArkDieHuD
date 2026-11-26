@@ -813,6 +813,35 @@
         }
       }
     },
+    "Allow IPv6 on Web Dashboard": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow IPv6 on Web Dashboard"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permitir IPv6 en el Panel Web"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permitir IPv6 no Painel Web"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permitir IPv6 no Painel Web"
+          }
+        }
+      }
+    },
     "Apply": {
       "extractionState": "manual",
       "localizations": {
@@ -1828,6 +1857,35 @@
         }
       }
     },
+    "Connect to Wi-Fi or USB Ethernet to view IP (or use USB tunnel on port %lld)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect to Wi-Fi or USB Ethernet to view IP (or use USB tunnel on port %lld)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conéctate por Wi-Fi o adaptador USB para ver la IP (o usa túnel USB en el puerto %lld)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecte no Wi-Fi ou Placa USB para ver o IP (ou use cabo USB na porta %lld)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecte no Wi-Fi ou Placa USB para ver o IP (ou use cabo USB na porta %lld)"
+          }
+        }
+      }
+    },
     "Connect to Wi-Fi to view IP (or use USB on port %lld)": {
       "extractionState": "manual",
       "localizations": {
@@ -1882,6 +1940,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Contenção / Lock"
+          }
+        }
+      }
+    },
+    "Copy IPv6": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy IPv6"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar IPv6"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar IPv6"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar IPv6"
           }
         }
       }
@@ -2491,6 +2578,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dirty Ratio (Alerta Jetsam)"
+          }
+        }
+      }
+    },
+    "Disabled by default for security and local IPv4 consistency. Turn on to allow IPv6 DNS resolution and ICMPv6/UDP/TCP probes.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disabled by default for security and local IPv4 consistency. Turn on to allow IPv6 DNS resolution and ICMPv6/UDP/TCP probes."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desactivado por defecto para seguridad y consistencia IPv4 local. Actívalo para permitir resolución DNS IPv6 y sondas ICMPv6/UDP/TCP."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desligado por padrão para segurança e consistência em IPv4 local. Ative para permitir resolução DNS IPv6 e sondas ICMPv6/UDP/TCP."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desligado por padrão para segurança e consistência em IPv4 local. Ative para permitir resolução DNS IPv6 e sondas ICMPv6/UDP/TCP."
           }
         }
       }
@@ -3829,6 +3945,35 @@
         }
       }
     },
+    "IP Protocol Version": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IP Protocol Version"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versión del Protocolo IP"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versão do Protocolo IP"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versão do Protocolo IP"
+          }
+        }
+      }
+    },
     "IP or Hostname": {
       "extractionState": "manual",
       "localizations": {
@@ -3999,6 +4144,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Log de Incidentes"
+          }
+        }
+      }
+    },
+    "Interface: %@ (%@)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface: %@ (%@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interfaz: %@ (%@)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface: %@ (%@)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface: %@ (%@)"
           }
         }
       }
@@ -5859,6 +6033,35 @@
         }
       }
     },
+    "No routable IPv6 address detected on the active network.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No routable IPv6 address detected on the active network."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se detectó ninguna dirección IPv6 enrutable en la red activa."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum endereço IPv6 roteável detectado na rede ativa."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum endereço IPv6 roteável detectado na rede ativa."
+          }
+        }
+      }
+    },
     "No thermal sensors found": {
       "extractionState": "manual",
       "localizations": {
@@ -7653,6 +7856,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Seguro"
+          }
+        }
+      }
+    },
+    "Safe default: IPv4 / local USB only (IPv6 port disabled).": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safe default: IPv4 / local USB only (IPv6 port disabled)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valor seguro: solo IPv4 / USB local (puerto IPv6 desactivado)."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Padrão seguro: apenas IPv4 / USB local (porta IPv6 desativada)."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Padrão seguro: apenas IPv4 / USB local (porta IPv6 desativada)."
           }
         }
       }
@@ -9774,6 +10006,64 @@
         }
       }
     },
+    "USB Ethernet active (%@)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB Ethernet active (%@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adaptador Ethernet USB activo (%@)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Placa de rede USB ativa (%@)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Placa de rede USB ativa (%@)"
+          }
+        }
+      }
+    },
+    "USB Ethernet detected (%@) — disabled below": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB Ethernet detected (%@) — disabled below"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adaptador USB detectado (%@) — desactivado abajo"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Placa USB detectada (%@) — desativada abaixo"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Placa USB detectada (%@) — desativada abaixo"
+          }
+        }
+      }
+    },
     "Ultra Minimal": {
       "extractionState": "manual",
       "localizations": {
@@ -9886,6 +10176,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tempo Ligado (Uptime)"
+          }
+        }
+      }
+    },
+    "Use IPv6 in Network Probes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use IPv6 in Network Probes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar IPv6 en las Sondas de Red"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar IPv6 nas Sondas de Rede"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar IPv6 nas Sondas de Rede"
+          }
+        }
+      }
+    },
+    "Use USB Ethernet adapter (LAN)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use USB Ethernet adapter (LAN)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar adaptador de red USB (Ethernet)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar placa de rede USB (Ethernet)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar placa de rede USB (Ethernet)"
           }
         }
       }
@@ -10263,6 +10611,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aguardando gravação do primeiro lote"
+          }
+        }
+      }
+    },
+    "Warning: public IPv6 may expose :8787 outside your LAN depending on your router firewall.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warning: public IPv6 may expose :8787 outside your LAN depending on your router firewall."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atención: IPv6 público puede exponer :8787 fuera de tu red local según el firewall del router."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atenção: IPv6 público pode expor :8787 fora da rede local dependendo do firewall do roteador."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atenção: IPv6 público pode expor :8787 fora da rede local dependendo do firewall do roteador."
           }
         }
       }

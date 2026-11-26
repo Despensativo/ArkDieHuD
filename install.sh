@@ -306,6 +306,9 @@ EFFECTIVE_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$
 
 echo ""
 echo "📲 Instalando no iPad/iPhone (${TARGET_DEVICE_LABEL})..."
+if [ -f "${APP_BUNDLE}/embedded.mobileprovision" ]; then
+    xcrun devicectl device profile install --device "${TARGET_DEVICE_ID}" "${APP_BUNDLE}/embedded.mobileprovision" >/dev/null 2>&1 || true
+fi
 xcrun devicectl device install app --device "${TARGET_DEVICE_ID}" "${APP_BUNDLE}"
 
 echo "🚀 Abrindo ArkDieHuD (${EFFECTIVE_BUNDLE_ID})..."

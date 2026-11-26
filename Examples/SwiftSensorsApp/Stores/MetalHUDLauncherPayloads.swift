@@ -125,7 +125,7 @@ enum MetalHUDLauncherPayloads {
 
     private static func sanitizeStreamURL(_ raw: String?) -> String? {
         guard let raw else { return nil }
-        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-:[]/")
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-:[]/%")
         let filtered = String(raw.unicodeScalars.filter { allowed.contains($0) })
         return filtered.hasPrefix("http://") || filtered.hasPrefix("https://") ? filtered : nil
     }
@@ -417,7 +417,7 @@ def ensure_pymobiledevice3_python() -> Optional[str]:
 def resolve_syslog_command(udid: Optional[str], stream_web_url: str = "") -> Optional[List[str]]:
     pmd_py = ensure_pymobiledevice3_python()
     if pmd_py:
-        raw_host = (urllib.parse.urlparse(stream_web_url).hostname or "").strip()
+        raw_host = urllib.parse.unquote((urllib.parse.urlparse(stream_web_url).hostname or "").strip())
         tcp_host = "" if raw_host in ("localhost", "127.0.0.1", "::1") else raw_host
         return [pmd_py, "-u", "-c", OSTRACE_SNIPPET, tcp_host, udid or ""]
 

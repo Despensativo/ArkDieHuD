@@ -883,7 +883,8 @@ function renderKPIs(d) {
   ).join("");
 
   const route = net.route || {};
-  document.getElementById("routeBadge").textContent = (route.interfaceKind || "Wi-Fi") + (route.isVPNActive ? " + VPN" : " " + s.direct);
+  const ifaceSuffix = route.activeInterfaceName ? ` (${route.activeInterfaceName})` : "";
+  document.getElementById("routeBadge").textContent = (route.interfaceKind || "Wi-Fi") + ifaceSuffix + (route.isVPNActive ? " + VPN" : " " + s.direct);
   document.getElementById("slaBadge").textContent = "P50 " + fmt0(net.p50Ms) + "ms • P95 " + fmt0(net.p95Ms) + "ms • P99 " + fmt0(net.p99Ms) + "ms";
 }
 
