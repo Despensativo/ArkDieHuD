@@ -31,11 +31,13 @@ actor TelemetryWebServer {
         return UserDefaults.standard.bool(forKey: Self.allowUSBEthernetDefaultsKey)
     }
 
+    private static let maxLiveRenderSamples = 900
     private let listenerQueue = DispatchQueue(label: "com.arkdiehud.telemetry.webserver", qos: .utility)
     private var listener: NWListener?
     private(set) var isListening: Bool = false
     private(set) var activePort: UInt16 = TelemetryWebServer.defaultPort
     private var latestSnapshot: TelemetrySnapshot = .placeholder
+    private var liveRenderSamples: [ExternalMetalHUDMetrics] = []
     private var shouldBeRunning: Bool = false
     private var allowIPv6: Bool = TelemetryWebServer.loadAllowIPv6()
     private var allowUSBEthernet: Bool = TelemetryWebServer.loadAllowUSBEthernet()
@@ -330,11 +332,22 @@ actor TelemetryWebServer {
             )
             await ExternalMetalHUDStore.shared.update(metrics)
             self.latestSnapshot = self.latestSnapshot.with(metalHUD: metrics)
+            self.liveRenderSamples.append(metrics)
+            if self.liveRenderSamples.count > Self.maxLiveRenderSamples {
+                self.liveRenderSamples.removeFirst(self.liveRenderSamples.count - Self.maxLiveRenderSamples)
+            }
             return Self.httpResponse(
                 status: "200 OK",
                 contentType: "application/json; charset=utf-8",
                 body: Data("{\"ok\":true}".utf8)
             )
+        case "/api/render-stream":
+            let cutoff = Date().addingTimeInterval(-max(60.0, windowSeconds))
+            let filtered = self.liveRenderSamples.filter { $0.updatedAt >= cutoff }
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .secondsSince1970
+            let body = (try? encoder.encode(filtered)) ?? Data("[]".utf8)
+            return Self.httpResponse(status: "200 OK", contentType: "application/json; charset=utf-8", body: body)
         case "/", "/index.html":
             let body = Data(TelemetryWebDashboardHTML.indexHTML.utf8)
             return Self.httpResponse(status: "200 OK", contentType: "text/html; charset=utf-8", body: body)

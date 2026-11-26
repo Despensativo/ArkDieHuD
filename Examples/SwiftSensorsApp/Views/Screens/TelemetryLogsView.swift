@@ -44,6 +44,7 @@ struct TelemetryLogsView: View {
         case thermal = "Thermal"
         case energyRAM = "Power & RAM"
         case network = "Network"
+        case renderFPS = "FPS & Render"
 
         var id: String { self.rawValue }
 
@@ -344,6 +345,47 @@ struct TelemetryLogsView: View {
                         .foregroundStyle(.red.opacity(0.7))
                         .lineStyle(StrokeStyle(lineWidth: 2))
                 }
+
+            case .renderFPS:
+                let fpsSeries = self.fpsBuckets
+                let yellowBuckets = self.renderVariationBuckets(in: fpsSeries)
+                ForEach(yellowBuckets) { hitch in
+                    RuleMark(x: .value(L10n.tr("Render Variations"), hitch.timestamp))
+                        .foregroundStyle(.yellow.opacity(0.85))
+                        .lineStyle(StrokeStyle(lineWidth: 2))
+                }
+                ForEach(fpsSeries) { bkt in
+                    if let avg = bkt.avgGameFPS, avg > 0 {
+                        LineMark(
+                            x: .value(L10n.tr("Time"), bkt.timestamp),
+                            y: .value("ms", min(35.0, 1000.0 / avg)),
+                            series: .value("Render", L10n.tr("Base Frame (ms)"))
+                        )
+                        .foregroundStyle(.green)
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                    }
+                }
+                ForEach(fpsSeries) { bkt in
+                    let minF = bkt.minGameFPS ?? bkt.avgGameFPS ?? 0
+                    if minF > 0 {
+                        LineMark(
+                            x: .value(L10n.tr("Time"), bkt.timestamp),
+                            y: .value("ms", min(35.0, 1000.0 / minF)),
+                            series: .value("Render", L10n.tr("Worst Frame (ms)"))
+                        )
+                        .foregroundStyle(Color.accentColor)
+                        .lineStyle(StrokeStyle(lineWidth: 2))
+                    }
+                }
+                ForEach(yellowBuckets) { hitch in
+                    let minF = hitch.minGameFPS ?? hitch.avgGameFPS ?? 60
+                    PointMark(
+                        x: .value(L10n.tr("Time"), hitch.timestamp),
+                        y: .value("ms", min(35.0, 1000.0 / max(1.0, minF)))
+                    )
+                    .foregroundStyle(.yellow)
+                    .symbolSize(55)
+                }
             }
         }
         .chartXAxis {
@@ -420,7 +462,45 @@ struct TelemetryLogsView: View {
             return String(format: "%.0f", val)
         case .network:
             return "\(Int(val))ms"
+        case .renderFPS:
+            return "\(Int(val))ms"
         }
+    }
+
+    private var fpsBuckets: [TelemetryLogBucket] {
+        self.series.filter { ($0.avgGameFPS ?? 0) > 0 }
+    }
+
+    private func renderVariationBuckets(in buckets: [TelemetryLogBucket]) -> [TelemetryLogBucket] {
+        var flagged: [TelemetryLogBucket] = []
+        for idx in buckets.indices {
+            let bkt = buckets[idx]
+            guard let avg = bkt.avgGameFPS, avg >= 55.0 else { continue }
+            let minF = bkt.minGameFPS ?? avg
+            guard minF >= 45.0 else { continue } // Ignore loading screens (<45 FPS)
+            let worstMs = 1000.0 / minF
+            let baseMs = 1000.0 / avg
+            let isLobbyCapTransition = minF >= 85.5 && minF <= 88.0 && avg < 105.0
+            guard !isLobbyCapTransition else { continue }
+
+            var hasAssetBurst = false
+            if idx > 0 {
+                let prev = buckets[idx - 1]
+                if let curV = bkt.avgGameVRAMMB, let prevV = prev.avgGameVRAMMB, (curV - prevV) >= 6.0 {
+                    hasAssetBurst = true
+                }
+                if let curR = bkt.avgGameRAMMB, let prevR = prev.avgGameRAMMB, (curR - prevR) >= 22.0 {
+                    hasAssetBurst = true
+                }
+            }
+
+            let strongMsHitch = (worstMs - baseMs) >= 1.8 && (avg - minF) >= 16.0 && minF <= avg * 0.86
+            let streamingAssistedHitch = hasAssetBurst && (worstMs - baseMs) >= 1.25 && (avg - minF) >= 13.0 && minF <= avg * 0.88
+            if strongMsHitch || streamingAssistedHitch {
+                flagged.append(bkt)
+            }
+        }
+        return flagged
     }
 
     private func infoTile(label: String, value: String) -> some View {

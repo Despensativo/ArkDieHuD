@@ -243,6 +243,16 @@ enum TelemetryWebDashboardHTML {
   <canvas id="fpsChart"></canvas>
 </section>
 
+<section class="card chart-card" id="renderChartCard" style="display:none;margin-bottom:18px;border-color:rgba(250,204,21,0.28);">
+  <h2>
+    <span id="renderChartTitle" style="color:#fde047;">Render &amp; Streaming Variations (ms / VRAM)</span>
+    <span id="renderChartLegend" class="legend">Blue: Worst Frame (ms) • Purple: VRAM • Yellow: Render Hitch</span>
+  </h2>
+  <div id="renderExplainer" style="font-size:11px;color:var(--muted);margin:-2px 0 8px 0;">Highlights in yellow sudden frame-time spikes (ms) and/or VRAM/RAM jumps caused by heavy texture, skin, or nearby entity streaming (ignoring loading screens &lt; 45 FPS).</div>
+  <canvas id="renderChart"></canvas>
+  <div id="renderEventsStrip" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+</section>
+
 <section class="card">
   <h2 id="incidentsTitle" style="margin:0 0 10px 0;font-size:14px;">Recent Network Incidents</h2>
   <table>
@@ -368,6 +378,13 @@ const I18N = {
     gameVRAMRAM: "Game VRAM / RAM",
     fpsChartTitle: "Game FPS History (Avg / Min)",
     fpsChartLegend: "Green: Avg FPS • Orange: Min FPS",
+    renderChartTitle: "Render & Streaming Variations (ms / VRAM)",
+    renderChartLegend: "Blue: Worst Frame (ms) • Purple: VRAM • Yellow: Variation",
+    renderExplainer: "Highlights in yellow sudden frame-time spikes (ms) and/or VRAM/RAM jumps caused by heavy texture, skin, or nearby entity streaming (ignoring loading screens < 45 FPS).",
+    renderSpikesLabel: "Yellow variations",
+    renderNoSpikes: "No sudden render variations detected in this window.",
+    renderLiveBadge: "1s Live",
+    renderHistBadge: "SQLite History",
     avgLabel: "Avg",
     minLabel: "Min",
     maxLabel: "Max",
@@ -466,6 +483,13 @@ const I18N = {
     gameVRAMRAM: "VRAM / RAM do Jogo",
     fpsChartTitle: "Histórico de FPS do Jogo (Média / Mín)",
     fpsChartLegend: "Verde: FPS Médio • Laranja: FPS Mínimo",
+    renderChartTitle: "Variações de Render e Streaming (ms / VRAM)",
+    renderChartLegend: "Azul: Pior Quadro (ms) • Roxo: VRAM • Amarelo: Variação",
+    renderExplainer: "Marca em amarelo picos súbitos de tempo de quadro (ms) e/ou saltos de VRAM/RAM causados por carregamento pesado de texturas, skins ou entidades próximas (ignorando telas de loading < 45 FPS).",
+    renderSpikesLabel: "Variações em amarelo",
+    renderNoSpikes: "Nenhuma variação brusca de renderização detectada nesta janela.",
+    renderLiveBadge: "1s Ao Vivo",
+    renderHistBadge: "Histórico SQLite",
     avgLabel: "Méd",
     minLabel: "Mín",
     maxLabel: "Máx",
@@ -556,6 +580,13 @@ const I18N = {
     gameVRAMRAM: "VRAM / RAM del Juego",
     fpsChartTitle: "Historial de FPS del Juego (Prom / Mín)",
     fpsChartLegend: "Verde: FPS Prom • Naranja: FPS Mín",
+    renderChartTitle: "Variaciones de Render y Streaming (ms / VRAM)",
+    renderChartLegend: "Azul: Peor Cuadro (ms) • Púrpura: VRAM • Amarillo: Variación",
+    renderExplainer: "Marca en amarillo picos súbitos de tiempo de cuadro (ms) y/o saltos de VRAM/RAM causados por carga pesada de texturas, skins o entidades cercanas (ignorando pantallas de carga < 45 FPS).",
+    renderSpikesLabel: "Variaciones amarillas",
+    renderNoSpikes: "Sin variaciones bruscas de renderizado en esta ventana.",
+    renderLiveBadge: "1s En Vivo",
+    renderHistBadge: "Historial SQLite",
     avgLabel: "Prom",
     minLabel: "Mín",
     maxLabel: "Máx",
@@ -647,6 +678,7 @@ let currentLang = detectLang();
 let selectedWindow = 3600;
 let lastSnapshot = null;
 let lastBuckets = null;
+let lastRenderStream = null;
 let lastIncidents = null;
 
 function t() { return I18N[currentLang] || I18N["en"]; }
@@ -1096,6 +1128,231 @@ function renderAllCharts(buckets) {
     { key: "maxGatewayMs", color: "#34d399" }
   ], buckets, "dropCount");
   drawFPSChart(buckets);
+  drawRenderVariationChart(lastRenderStream, buckets);
+}
+
+function buildRenderPoints(liveStream, buckets) {
+  const nowSec = Date.now() / 1000;
+  const useLive = selectedWindow <= 900
+    && Array.isArray(liveStream)
+    && liveStream.length >= 4
+    && (nowSec - (liveStream[liveStream.length - 1].updatedAt || 0)) < 180;
+
+  const raw = useLive
+    ? liveStream.filter(p => p.fps != null && isFinite(p.fps) && p.fps > 0).map(p => ({
+        timestamp: p.updatedAt,
+        avgFPS: p.fps,
+        minFPS: p.fps,
+        worstMs: p.frameTimeMs != null && p.frameTimeMs > 0 ? p.frameTimeMs : (1000.0 / p.fps),
+        baseMs: 1000.0 / p.fps,
+        vramMB: p.vramMB,
+        ramMB: p.ramMB,
+        isLive: true
+      }))
+    : (buckets || []).filter(b => b.avgGameFPS != null && isFinite(b.avgGameFPS) && b.avgGameFPS > 0).map(b => {
+        const minF = (b.minGameFPS != null && b.minGameFPS > 0) ? b.minGameFPS : b.avgGameFPS;
+        return {
+          timestamp: b.timestamp,
+          avgFPS: b.avgGameFPS,
+          minFPS: minF,
+          worstMs: 1000.0 / minF,
+          baseMs: 1000.0 / b.avgGameFPS,
+          vramMB: b.avgGameVRAMMB,
+          ramMB: b.avgGameRAMMB,
+          isLive: false
+        };
+      });
+
+  const points = raw.map((pt, idx) => {
+    const prevSlice = [];
+    for (let j = Math.max(0, idx - 4); j < idx; j++) {
+      if (raw[j].avgFPS >= 55 && raw[j].minFPS >= 45) prevSlice.push(raw[j]);
+    }
+    const prev = idx > 0 ? raw[idx - 1] : null;
+    const refMs = prevSlice.length
+      ? prevSlice.reduce((acc, x) => acc + x.baseMs, 0) / prevSlice.length
+      : pt.baseMs;
+    const deltaVRAM = (prev && pt.vramMB != null && prev.vramMB != null) ? (pt.vramMB - prev.vramMB) : 0;
+    const deltaRAM = (prev && pt.ramMB != null && prev.ramMB != null) ? (pt.ramMB - prev.ramMB) : 0;
+
+    // Ignore loading/menu transitions (< 45 FPS) and lobby 90->120 mode switches (min ~86.6 FPS)
+    // so only genuine in-game frame-time hitches (especially paired with VRAM/RAM streaming) turn yellow.
+    const inGameplay = pt.minFPS >= 45 && pt.avgFPS >= 55;
+    const isLobbyCapTransition = !pt.isLive && pt.minFPS >= 85.5 && pt.minFPS <= 88.0 && pt.avgFPS < 105.0;
+    const hasAssetBurst = deltaVRAM >= (pt.isLive ? 5.0 : 6.0) || deltaRAM >= (pt.isLive ? 18.0 : 22.0);
+    const strongMsHitch = pt.isLive
+      ? (prevSlice.length >= 2 && (pt.worstMs - refMs) >= 2.2 && pt.worstMs >= refMs * 1.22)
+      : (!isLobbyCapTransition && (pt.worstMs - pt.baseMs) >= 1.8 && (pt.avgFPS - pt.minFPS) >= 16.0 && pt.minFPS <= pt.avgFPS * 0.86);
+    const streamingAssistedHitch = !pt.isLive
+      && !isLobbyCapTransition
+      && hasAssetBurst
+      && (pt.worstMs - pt.baseMs) >= 1.25
+      && (pt.avgFPS - pt.minFPS) >= 13.0
+      && pt.minFPS <= pt.avgFPS * 0.88;
+    const liveStreamingHitch = pt.isLive
+      && prevSlice.length >= 2
+      && hasAssetBurst
+      && (pt.worstMs - refMs) >= 1.4
+      && pt.worstMs >= refMs * 1.14;
+    const isYellow = inGameplay && (strongMsHitch || streamingAssistedHitch || liveStreamingHitch);
+
+    return {
+      ...pt,
+      deltaVRAM,
+      deltaRAM,
+      msHitch: strongMsHitch || streamingAssistedHitch || liveStreamingHitch,
+      vramJump: deltaVRAM >= 5.0,
+      ramJump: deltaRAM >= 18.0,
+      isYellow
+    };
+  });
+
+  return { points, useLive };
+}
+
+function drawRenderVariationChart(liveStream, buckets) {
+  const s = t();
+  const card = document.getElementById("renderChartCard");
+  const { points, useLive } = buildRenderPoints(liveStream, buckets);
+  card.style.display = points.length >= 2 ? "block" : "none";
+  if (points.length < 2) return;
+
+  document.getElementById("renderChartTitle").textContent = s.renderChartTitle;
+  document.getElementById("renderExplainer").textContent = s.renderExplainer;
+
+  const yellowEvents = points.filter(p => p.isYellow);
+  const modeBadge = useLive ? s.renderLiveBadge : s.renderHistBadge;
+  document.getElementById("renderChartLegend").textContent =
+    `${modeBadge} • ${s.renderChartLegend} • ${s.renderSpikesLabel}: ${yellowEvents.length}`;
+
+  const canvas = document.getElementById("renderChart");
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const padL = 46, padR = 14, padT = 12, padB = 22;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+
+  const gameplayMs = points.map(p => Math.min(35, p.worstMs));
+  const minMs = Math.max(4, Math.floor(Math.min(...gameplayMs) - 1));
+  const maxMs = Math.max(minMs + 6, Math.ceil(Math.max(...gameplayMs) * 1.12));
+  const xFor = idx => padL + (idx / (points.length - 1)) * plotW;
+  const yForMs = ms => {
+    const clamped = Math.min(maxMs, Math.max(minMs, ms));
+    return padT + plotH - ((clamped - minMs) / (maxMs - minMs)) * plotH;
+  };
+
+  ctx.strokeStyle = "rgba(148,163,184,0.12)";
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#939bb0";
+  ctx.font = "11px monospace";
+  for (let i = 0; i <= 4; i++) {
+    const val = minMs + ((maxMs - minMs) * (4 - i)) / 4;
+    const y = padT + (plotH * i) / 4;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(w - padR, y);
+    ctx.stroke();
+    ctx.fillText(val.toFixed(1) + "ms", 2, y + 4);
+  }
+
+  // 1. Yellow highlight bands + vertical lines for render/streaming variations
+  const bandW = Math.max(4, Math.min(14, plotW / points.length));
+  points.forEach((p, idx) => {
+    if (!p.isYellow) return;
+    const x = xFor(idx);
+    ctx.fillStyle = (p.msHitch && (p.vramJump || p.ramJump))
+      ? "rgba(250, 204, 21, 0.24)"
+      : "rgba(250, 204, 21, 0.14)";
+    ctx.fillRect(x - bandW * 0.5, padT, bandW, plotH);
+
+    ctx.strokeStyle = "rgba(250, 204, 21, 0.88)";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + plotH);
+    ctx.stroke();
+  });
+
+  // 2. VRAM curve (purple dashed, normalized to plot height)
+  const vramVals = points.map(p => p.vramMB).filter(v => v != null && isFinite(v));
+  if (vramVals.length >= 2) {
+    const minV = Math.min(...vramVals);
+    const maxV = Math.max(minV + 10, Math.max(...vramVals));
+    ctx.save();
+    ctx.strokeStyle = "rgba(192, 132, 252, 0.78)";
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    let startedV = false;
+    points.forEach((p, idx) => {
+      if (p.vramMB == null) { startedV = false; return; }
+      const x = xFor(idx);
+      const y = padT + plotH - ((p.vramMB - minV) / (maxV - minV)) * (plotH * 0.85);
+      if (!startedV) { ctx.moveTo(x, y); startedV = true; } else { ctx.lineTo(x, y); }
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 3. Worst frame-time ms curve (cyan solid)
+  ctx.strokeStyle = "#38bdf8";
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  points.forEach((p, idx) => {
+    const x = xFor(idx);
+    const y = yForMs(p.worstMs);
+    if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // 4. Glowing yellow dots on detected variations
+  points.forEach((p, idx) => {
+    if (!p.isYellow) return;
+    const x = xFor(idx);
+    const y = yForMs(p.worstMs);
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(250, 204, 21, 0.32)";
+    ctx.arc(x, y, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.fillStyle = "#facc15";
+    ctx.strokeStyle = "#0b0d12";
+    ctx.lineWidth = 1.5;
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  // X-axis timestamps
+  ctx.fillStyle = "#939bb0";
+  ctx.font = "10px monospace";
+  const fmtTime = ts => new Date(ts * 1000).toLocaleTimeString();
+  ctx.fillText(fmtTime(points[0].timestamp), padL, padT + plotH + 15);
+  if (points.length >= 4) {
+    const mid = points[Math.floor(points.length / 2)];
+    ctx.fillText(fmtTime(mid.timestamp), padL + plotW * 0.5 - 24, padT + plotH + 15);
+  }
+  ctx.fillText(fmtTime(points[points.length - 1].timestamp), Math.max(padL + 60, w - padR - 54), padT + plotH + 15);
+
+  // 5. Recent yellow variation badges below chart
+  const strip = document.getElementById("renderEventsStrip");
+  if (!yellowEvents.length) {
+    strip.innerHTML = `<span style="font-size:11.5px;color:var(--muted);">${s.renderNoSpikes}</span>`;
+  } else {
+    strip.innerHTML = yellowEvents.slice(-8).reverse().map(ev => {
+      const tStr = fmtTime(ev.timestamp);
+      const vramTag = ev.deltaVRAM >= 3.0 ? ` • +${ev.deltaVRAM.toFixed(0)} MB VRAM` : "";
+      const ramTag = (!vramTag && ev.deltaRAM >= 15.0) ? ` • +${ev.deltaRAM.toFixed(0)} MB RAM` : "";
+      return `<span style="font-size:11px;font-family:ui-monospace,monospace;padding:3px 8px;border-radius:999px;background:rgba(250,204,21,0.12);border:1px solid rgba(250,204,21,0.45);color:#fde047;">● ${tStr} • ${ev.worstMs.toFixed(1)} ms (${ev.minFPS.toFixed(0)} FPS)${vramTag}${ramTag}</span>`;
+    }).join("");
+  }
 }
 
 function renderIncidents(events) {
@@ -1124,6 +1381,13 @@ async function pollSnapshot() {
     renderKPIs(data);
     if (data && data.gameFPS != null) {
       drawFPSChart(lastBuckets);
+      if (selectedWindow <= 900) {
+        const rRes = await fetch("/api/render-stream?window=" + selectedWindow, { cache: "no-store" });
+        if (rRes.ok) {
+          lastRenderStream = await rRes.json();
+          drawRenderVariationChart(lastRenderStream, lastBuckets);
+        }
+      }
     }
   } catch {
     document.getElementById("liveDot").classList.add("offline");
@@ -1132,10 +1396,14 @@ async function pollSnapshot() {
 
 async function pollHistoryAndIncidents() {
   try {
-    const [hRes, iRes] = await Promise.all([
+    const [hRes, iRes, rRes] = await Promise.all([
       fetch("/api/history?window=" + selectedWindow, { cache: "no-store" }),
-      fetch("/api/incidents", { cache: "no-store" })
+      fetch("/api/incidents", { cache: "no-store" }),
+      fetch("/api/render-stream?window=" + selectedWindow, { cache: "no-store" })
     ]);
+    if (rRes.ok) {
+      lastRenderStream = await rRes.json();
+    }
     if (hRes.ok) {
       lastBuckets = await hRes.json();
       renderAllCharts(lastBuckets);

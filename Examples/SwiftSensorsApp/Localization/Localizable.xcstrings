@@ -1161,6 +1161,35 @@
         }
       }
     },
+    "Base Frame (ms)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Base Frame (ms)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuadro Base (ms)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quadro Base (ms)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quadro Base (ms)"
+          }
+        }
+      }
+    },
     "Battery": {
       "extractionState": "manual",
       "localizations": {
@@ -3332,6 +3361,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Perda externa: %.1f%% (%lldp)"
+          }
+        }
+      }
+    },
+    "FPS & Render": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FPS & Render"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FPS y Render"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FPS e Render"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FPS e Render"
           }
         }
       }
@@ -7454,6 +7512,35 @@
         }
       }
     },
+    "Render Variations": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Render Variations"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variaciones de Render"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variações de Render"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variações de Render"
+          }
+        }
+      }
+    },
     "Reset All": {
       "extractionState": "manual",
       "localizations": {
@@ -10843,6 +10930,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fixa (Wired)"
+          }
+        }
+      }
+    },
+    "Worst Frame (ms)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Worst Frame (ms)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peor Cuadro (ms)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pior Quadro (ms)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pior Quadro (ms)"
           }
         }
       }
