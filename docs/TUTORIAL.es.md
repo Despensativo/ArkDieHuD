@@ -75,6 +75,7 @@ Activa **Grabar logs de telemetría (24h)** para guardar métricas cada 15s, con
    iproxy 8787 8787   # abre http://127.0.0.1:8787
    ```
    - **Toggles de Seguridad IPv6 (desactivados por defecto):** tanto **Permitir IPv6 en el Panel Web** como **Usar IPv6 en sondas de red** vienen en **OFF** para no abrir `:8787` en IPv6 pública salvo que los actives manualmente.
+   - **Medición real con VPN de juego activa (activado por defecto):** en *Red → Configurar Destino*, **Omitir túnel VPN en sondas de red** vincula los sockets ICMP/UDP/TCP directamente al Wi-Fi o Ethernet USB (`IP_BOUND_IF`) para detectar caídas reales del ISP sin que la VPN las oculte.
 3. Si usas chat de voz/micrófono en juegos, mantén activado **PiP discreto (ocultar en el borde)**, abre el PiP y **arrastra la píldora hacia el borde lateral** para dejar la pantalla limpia mientras el monitor en PC sigue activo.
 
 ---

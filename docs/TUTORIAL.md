@@ -92,6 +92,7 @@ Want to see CPU/GPU thermals, Watts, latency charts, and packet drops on a secon
    Open `http://<IPAD_IP>:8787` (shown right inside the card with a **Copy URL** button) in any desktop/mobile browser.
    - **USB-C Ethernet NICs:** supported automatically when **Use USB Ethernet adapter (LAN)** is enabled (default ON); toggle it OFF anytime to prefer Wi-Fi.
    - **IPv6 Security Toggles (OFF by default):** both **Allow IPv6 on Web Dashboard** (card toggle) and **Use IPv6 in Network Probes** (Network Target sheet) default to **OFF** so `:8787` never binds a public/global IPv6 socket unless you explicitly opt in behind your router firewall.
+   - **Real ISP Loss Detection with Gaming VPNs (ON by default):** inside *Network → Configure Target*, **Bypass VPN in Network Probes** binds ICMP/UDP/TCP sockets directly to Wi-Fi or USB Ethernet (`IP_BOUND_IF`) so local VPN tunnels cannot spoof TCP or mask real external ISP packet drops while your game keeps using the VPN.
 3. **Option 2 — Over USB Cable (Zero Wi-Fi Dependency):**
    ```bash
    brew install libimobiledevice   # Mac (one-time)

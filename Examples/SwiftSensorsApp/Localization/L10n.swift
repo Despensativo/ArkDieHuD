@@ -97,10 +97,16 @@ extension NetworkIncidentKind {
 extension NetworkRouteInfo {
     var localizedSummary: String {
         if self.isVPNActive {
+            let base: String
             if let vpn = self.vpnInterfaceName {
-                return "\(self.interfaceKind) + VPN (\(vpn))"
+                base = "\(self.interfaceKind) + VPN (\(vpn))"
+            } else {
+                base = "\(self.interfaceKind) + VPN"
             }
-            return "\(self.interfaceKind) + VPN"
+            if self.isBypassingVPN {
+                return L10n.fmt("%@ • Real Link", base)
+            }
+            return base
         }
         return L10n.fmt("%@ Direct", self.interfaceKind)
     }

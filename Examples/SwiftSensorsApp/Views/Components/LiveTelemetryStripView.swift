@@ -115,7 +115,14 @@ struct LiveTelemetryStripView: View {
         }
 
         if self.config.showPing {
-            let pingTitle = self.snapshot.network.route.isVPNActive ? "Ping • VPN" : "Ping / RTT"
+            let pingTitle: String
+            if self.snapshot.network.route.isBypassingVPN {
+                pingTitle = L10n.tr("Ping • Real Link")
+            } else if self.snapshot.network.route.isVPNActive {
+                pingTitle = "Ping • VPN"
+            } else {
+                pingTitle = "Ping / RTT"
+            }
             items.append(StripTileItem(
                 id: "network_primary",
                 title: pingTitle,

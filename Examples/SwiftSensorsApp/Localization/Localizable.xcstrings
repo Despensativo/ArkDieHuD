@@ -146,6 +146,35 @@
         }
       }
     },
+    "%@ • Real Link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • Real Link"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • Enlace Real"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • Ligação Real"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • Link Real"
+          }
+        }
+      }
+    },
     "%lld IOHID sensors": {
       "extractionState": "manual",
       "localizations": {
@@ -1215,6 +1244,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Em buffer: %llds"
+          }
+        }
+      }
+    },
+    "Bypass VPN in Network Probes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bypass VPN in Network Probes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omitir túnel VPN en sondas de red (medir enlace real)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorar túnel VPN nas sondas (medir ligação real)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorar túnel VPN nas sondas (medir link real)"
           }
         }
       }
@@ -3042,6 +3100,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ative métricas"
+          }
+        }
+      }
+    },
+    "Enabled by default. Binds ICMP, UDP, and TCP probes directly to Wi-Fi or USB Ethernet so gaming/proxy VPN tunnels cannot mask real ISP packet loss while your game keeps using the VPN.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enabled by default. Binds ICMP, UDP, and TCP probes directly to Wi-Fi or USB Ethernet so gaming/proxy VPN tunnels cannot mask real ISP packet loss while your game keeps using the VPN."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activado por defecto. Vincula las sondas ICMP, UDP y TCP directamente al Wi-Fi o Ethernet USB para que los túneles VPN no oculten pérdidas reales del proveedor mientras el juego sigue usando la VPN."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ativado por predefinição. Liga as sondas ICMP, UDP e TCP diretamente ao Wi-Fi ou adaptador Ethernet USB para que túneis VPN não ocultem perdas reais da operadora enquanto o jogo usa a VPN."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ativado por padrão. Amarra as sondas ICMP, UDP e TCP direto no Wi-Fi ou placa USB Ethernet para que túneis de VPN/boosters não mascarem perdas reais da operadora enquanto o jogo segue usando a VPN."
           }
         }
       }
@@ -6787,6 +6874,35 @@
         }
       }
     },
+    "Ping • Real Link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ping • Real Link"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ping • Enlace Real"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ping • Ligação Real"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ping • Link Real"
+          }
+        }
+      }
+    },
     "Power": {
       "extractionState": "manual",
       "localizations": {
@@ -10379,6 +10495,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uso do Usuário"
+          }
+        }
+      }
+    },
+    "VPN & Physical Link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VPN & Physical Link"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VPN y Enlace Físico"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VPN e Ligação Física"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VPN e Link Físico"
           }
         }
       }

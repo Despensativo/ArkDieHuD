@@ -57,6 +57,7 @@ public actor NetworkQualityMonitor {
         static let probeProtocol = "SwiftSensors.net.protocol"
         static let useUSBEthernet = "SwiftSensors.net.useUSBEthernet.v1"
         static let useIPv6Probes = "SwiftSensors.net.useIPv6Probes.v1"
+        static let bypassVPN = "SwiftSensors.net.bypassVPN.v1"
     }
 
     private struct ProtocolTrackState {
@@ -91,6 +92,7 @@ public actor NetworkQualityMonitor {
     private var protocolPreference: NetworkProbeProtocol
     private var useUSBEthernet: Bool
     private var useIPv6Probes: Bool
+    private var bypassVPN: Bool
     private var activeTransport: NetworkProbeTransportUsed = .multi
 
     private var isRunning: Bool = false
@@ -160,6 +162,7 @@ public actor NetworkQualityMonitor {
         self.protocolPreference = Self.loadSavedProtocol()
         self.useUSBEthernet = Self.loadSavedBool(DefaultsKey.useUSBEthernet, defaultValue: true)
         self.useIPv6Probes = Self.loadSavedBool(DefaultsKey.useIPv6Probes, defaultValue: false)
+        self.bypassVPN = Self.loadSavedBool(DefaultsKey.bypassVPN, defaultValue: true)
 
         Task { [self] in
             await self.start()
@@ -225,6 +228,17 @@ public actor NetworkQualityMonitor {
 
     public func getUseIPv6Probes() -> Bool {
         self.useIPv6Probes
+    }
+
+    public func setBypassVPN(_ enabled: Bool) {
+        self.bypassVPN = enabled
+        UserDefaults.standard.set(enabled, forKey: DefaultsKey.bypassVPN)
+        ICMPProber.clearDNSCache()
+        self.resetTargetProbeState()
+    }
+
+    public func getBypassVPN() -> Bool {
+        self.bypassVPN
     }
 
     public func start() {
@@ -407,6 +421,7 @@ public actor NetworkQualityMonitor {
         lines.append("# UDPProbeHost,\(metrics.udpProbeHost):53")
         lines.append("# Gateway,\(metrics.gatewayHost ?? "N/A")")
         lines.append("# Route,\(metrics.route.summaryLabel)")
+        lines.append("# BypassVPN,\(self.bypassVPN)")
         lines.append("# TotalProbes,\(metrics.totalProbes),TargetLost,\(metrics.totalLostCount),TargetLossPct,\(String(format: "%.2f", metrics.totalLossPercent))")
         lines.append("# ICMPLost,\(metrics.icmpLostCount),ICMPPct,\(String(format: "%.2f", metrics.icmpLossPercent))")
         lines.append("# UDPLost,\(metrics.udpLostCount),UDPPct,\(String(format: "%.2f", metrics.udpLossPercent))")
@@ -478,15 +493,19 @@ public actor NetworkQualityMonitor {
         } else {
             effectiveInterfaceKind = self.pathInterfaceKind
         }
+        let isVPNPresent = netIf.vpnInterface != nil
+        let probeBoundInterface = self.bypassVPN ? netIf.activeInterfaceName : nil
+        let isActivelyBypassingVPN = isVPNPresent && self.bypassVPN && (netIf.activeInterfaceName != nil)
         let updatedRoute = NetworkRouteInfo(
             interfaceKind: effectiveInterfaceKind,
-            isVPNActive: netIf.vpnInterface != nil,
+            isVPNActive: isVPNPresent,
             vpnInterfaceName: netIf.vpnInterface,
             localIPv4: netIf.localIPv4,
             detectedGatewayIP: netIf.detectedGatewayIP,
             activeInterfaceName: netIf.activeInterfaceName,
             usbEthernetIPv4: netIf.usbEthernetIPv4,
-            localIPv6: netIf.localIPv6
+            localIPv6: netIf.localIPv6,
+            isBypassingVPN: isActivelyBypassingVPN
         )
         self.recordRouteTransitionIfNeeded(updatedRoute, at: now)
         self.lastRouteInfo = updatedRoute
@@ -494,8 +513,16 @@ public actor NetworkQualityMonitor {
         let activeGateway = self.customGatewayHost ?? updatedRoute.detectedGatewayIP
 
         // 2. Simultaneous Probe: External Protocol(s) + Local Gateway Router
-        async let targetProbeOutcome = self.probeExternalProtocols(sequence: seq16)
-        async let gatewayProbeResult = self.probeGateway(host: activeGateway, sequence: seq16 &+ 0x4000)
+        async let targetProbeOutcome = self.probeExternalProtocols(
+            sequence: seq16,
+            boundInterface: probeBoundInterface,
+            isVPNActive: isVPNPresent
+        )
+        async let gatewayProbeResult = self.probeGateway(
+            host: activeGateway,
+            sequence: seq16 &+ 0x4000,
+            boundInterface: probeBoundInterface
+        )
 
         let outcome = await targetProbeOutcome
         let (gatewayRTT, didProbeGateway) = await gatewayProbeResult
@@ -539,9 +566,15 @@ public actor NetworkQualityMonitor {
                     self.ispOnlyDropCount += 1
                     kind = .ispDrop
                     let gwStr = gatewayRTT.map { String(format: "%.1f ms", $0) } ?? "OK"
-                    details = self.protocolPreference == .simultaneous
-                        ? "ICMP, UDP e TCP sem resposta (Roteador OK: \(gwStr))"
-                        : "Roteador OK (\(gwStr)); falha na rota externa (\(self.currentTarget.host))"
+                    if self.protocolPreference == .simultaneous {
+                        if let tcpMs = outcome.tcpRTTMs {
+                            details = String(format: "Queda UDP/ICMP na WAN (TCP: %.0f ms; Roteador OK: %@)", tcpMs, gwStr)
+                        } else {
+                            details = "ICMP, UDP e TCP sem resposta (Roteador OK: \(gwStr))"
+                        }
+                    } else {
+                        details = "Roteador OK (\(gwStr)); falha na rota externa (\(self.currentTarget.host))"
+                    }
                 }
             } else {
                 kind = .drop
@@ -684,7 +717,11 @@ public actor NetworkQualityMonitor {
         return "1.1.1.1"
     }
 
-    private func probeExternalProtocols(sequence: UInt16) async -> ExternalProbeOutcome {
+    private func probeExternalProtocols(
+        sequence: UInt16,
+        boundInterface: String?,
+        isVPNActive: Bool
+    ) async -> ExternalProbeOutcome {
         let udpHost = self.resolvedUDPTargetHost()
         let allowIPv6 = self.useIPv6Probes
 
@@ -694,26 +731,40 @@ public actor NetworkQualityMonitor {
                 host: self.currentTarget.host,
                 sequence: sequence,
                 timeout: 0.9,
-                allowIPv6: allowIPv6
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
             )
             async let udpProbe = ICMPProber.pingUDPDNS(
                 host: udpHost,
                 port: 53,
                 transactionID: sequence,
                 timeout: 0.9,
-                allowIPv6: allowIPv6
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
             )
             async let tcpProbe = ICMPProber.pingTCP(
                 host: self.currentTarget.host,
                 port: self.currentTarget.port,
                 timeout: 0.9,
-                allowIPv6: allowIPv6
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
             )
 
             let icmpRTT = await icmpProbe
             let udpRTT = await udpProbe
             let tcpRTT = await tcpProbe
-            let primary = icmpRTT ?? udpRTT ?? tcpRTT
+
+            // When single-shot datagram probes (ICMP or UDP) have succeeded on this network,
+            // do not allow TCP SYN retransmissions (~350-500ms) or local utun* proxy SYN-ACKs
+            // (<3.5ms) to mask real sub-second ISP packet drops that affect UDP games.
+            let isLikelyLocalVPNSpoof = isVPNActive
+                && boundInterface == nil
+                && (tcpRTT.map { $0 < 3.5 } ?? false)
+                && (udpRTT == nil || (udpRTT ?? 0) > 5.0)
+            let effectiveTCP = isLikelyLocalVPNSpoof ? nil : tcpRTT
+            let datagramCapable = self.icmpTrack.hasSucceededOnce || self.udpTrack.hasSucceededOnce
+            let datagramRTT = icmpRTT ?? udpRTT
+            let primary = datagramCapable ? datagramRTT : (datagramRTT ?? effectiveTCP)
 
             return ExternalProbeOutcome(
                 primaryRTTMs: primary,
@@ -732,7 +783,8 @@ public actor NetworkQualityMonitor {
                 host: self.currentTarget.host,
                 sequence: sequence,
                 timeout: 1.0,
-                allowIPv6: allowIPv6
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
             )
             return ExternalProbeOutcome(
                 primaryRTTMs: rtt,
@@ -752,7 +804,8 @@ public actor NetworkQualityMonitor {
                 port: 53,
                 transactionID: sequence,
                 timeout: 1.0,
-                allowIPv6: allowIPv6
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
             )
             return ExternalProbeOutcome(
                 primaryRTTMs: rtt,
@@ -771,7 +824,8 @@ public actor NetworkQualityMonitor {
                 host: self.currentTarget.host,
                 port: self.currentTarget.port,
                 timeout: 1.0,
-                allowIPv6: allowIPv6
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
             )
             return ExternalProbeOutcome(
                 primaryRTTMs: rtt,
@@ -791,7 +845,8 @@ public actor NetworkQualityMonitor {
                     host: self.currentTarget.host,
                     port: self.currentTarget.port,
                     timeout: 1.0,
-                    allowIPv6: allowIPv6
+                    allowIPv6: allowIPv6,
+                    boundInterface: boundInterface
                 )
                 return ExternalProbeOutcome(
                     primaryRTTMs: rtt,
@@ -810,7 +865,8 @@ public actor NetworkQualityMonitor {
                 host: self.currentTarget.host,
                 sequence: sequence,
                 timeout: 1.0,
-                allowIPv6: allowIPv6
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
             ) {
                 self.consecutiveICMPFailures = 0
                 return ExternalProbeOutcome(
@@ -832,7 +888,8 @@ public actor NetworkQualityMonitor {
                     host: self.currentTarget.host,
                     port: self.currentTarget.port,
                     timeout: 0.9,
-                    allowIPv6: allowIPv6
+                    allowIPv6: allowIPv6,
+                    boundInterface: boundInterface
                 ) {
                     self.autoFallbackToTCP = true
                     return ExternalProbeOutcome(
@@ -901,29 +958,57 @@ public actor NetworkQualityMonitor {
         }
     }
 
-    private func probeGateway(host: String?, sequence: UInt16) async -> (Double?, Bool) {
+    private func probeGateway(
+        host: String?,
+        sequence: UInt16,
+        boundInterface: String?
+    ) async -> (Double?, Bool) {
         guard let host, !host.isEmpty else {
             return (nil, false)
         }
         let allowIPv6 = self.useIPv6Probes
 
         if self.gatewayUseTCPFallback {
-            let tcp = await ICMPProber.pingTCP(host: host, port: 80, timeout: 0.85, allowIPv6: allowIPv6)
+            let tcp = await ICMPProber.pingTCP(
+                host: host,
+                port: 80,
+                timeout: 0.85,
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
+            )
             if tcp != nil {
                 return (tcp, true)
             }
-            let dnsFallback = await ICMPProber.pingTCP(host: host, port: 53, timeout: 0.5, allowIPv6: allowIPv6)
+            let dnsFallback = await ICMPProber.pingTCP(
+                host: host,
+                port: 53,
+                timeout: 0.5,
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
+            )
             return (dnsFallback, true)
         }
 
-        if let icmp = await ICMPProber.pingICMP(host: host, sequence: sequence, timeout: 0.85, allowIPv6: allowIPv6) {
+        if let icmp = await ICMPProber.pingICMP(
+            host: host,
+            sequence: sequence,
+            timeout: 0.85,
+            allowIPv6: allowIPv6,
+            boundInterface: boundInterface
+        ) {
             self.gatewayICMPFailures = 0
             return (icmp, true)
         }
 
         self.gatewayICMPFailures += 1
         if self.gatewayICMPFailures >= 3 {
-            if let tcp = await ICMPProber.pingTCP(host: host, port: 80, timeout: 0.5, allowIPv6: allowIPv6) {
+            if let tcp = await ICMPProber.pingTCP(
+                host: host,
+                port: 80,
+                timeout: 0.5,
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
+            ) {
                 self.gatewayUseTCPFallback = true
                 return (tcp, true)
             }
@@ -959,7 +1044,9 @@ public actor NetworkQualityMonitor {
             self.hasInitializedRoute = true
             return
         }
-        if route.interfaceKind != self.lastRouteInfo.interfaceKind || route.isVPNActive != self.lastRouteInfo.isVPNActive {
+        if route.interfaceKind != self.lastRouteInfo.interfaceKind
+            || route.isVPNActive != self.lastRouteInfo.isVPNActive
+            || route.isBypassingVPN != self.lastRouteInfo.isBypassingVPN {
             self.appendIncident(NetworkIncidentEvent(
                 timestamp: date,
                 kind: .routeChange,

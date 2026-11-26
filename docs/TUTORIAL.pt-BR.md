@@ -92,6 +92,7 @@ Quer acompanhar temperatura, Watts, ping, UDP e quedas em outro monitor (**PC Wi
    Abra o endereço `http://<IP_DO_IPAD>:8787` (exibido no card com botão **Copiar URL**) no navegador do seu PC/Mac.
    - **Placa de rede via USB (Ethernet LAN):** funciona com **Usar adaptador de rede USB (LAN)** ligado (padrão). Você pode desligar esse toggle a qualquer momento no card para forçar Wi-Fi.
    - **Segurança IPv6 (desligado por padrão):** por padrão, o servidor `:8787` e os testes de latência usam **apenas IPv4** para não expor o painel `:8787` via IPv6 global na internet. Só ative **Permitir IPv6 no Painel Web** (no card) ou **Usar IPv6 nas sondas de rede** (em *Alvo / Rede*) se sua LAN usar firewall local e você realmente quiser testar/acessar via IPv6.
+   - **Medição real mesmo com VPN de jogo ligada (ligado por padrão):** em *Rede → Configurar Alvo*, o toggle **Ignorar túnel VPN nas sondas (medir link real)** amarra as sondas ICMP/UDP/TCP diretamente na placa Wi-Fi ou USB Ethernet (`IP_BOUND_IF`), evitando que boosters/VPNs mascarem quedas externas da operadora enquanto o jogo segue usando a VPN normalmente.
 3. **Via Cabo USB (sem depender do Wi-Fi):**
    ```bash
    brew install libimobiledevice   # Mac (instalar uma vez)

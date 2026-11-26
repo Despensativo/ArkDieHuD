@@ -253,6 +253,16 @@ public actor SwiftSensors {
         await NetworkQualityMonitor.shared.getUseIPv6Probes()
     }
 
+    /// Enable or disable binding network probes directly to the physical interface (Wi-Fi/Ethernet)
+    /// so active VPN tunnels cannot mask external ISP packet loss (enabled by default).
+    public func setNetworkBypassVPN(_ enabled: Bool) async {
+        await NetworkQualityMonitor.shared.setBypassVPN(enabled)
+    }
+
+    public func getNetworkBypassVPN() async -> Bool {
+        await NetworkQualityMonitor.shared.getBypassVPN()
+    }
+
     /// Export full network diagnostics summary, incident timeline, and sample history as CSV
     public func exportNetworkDiagnosticsCSV() async -> String {
         await NetworkQualityMonitor.shared.exportDiagnosticsCSV()

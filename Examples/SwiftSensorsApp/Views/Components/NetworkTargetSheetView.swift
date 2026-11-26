@@ -22,6 +22,7 @@ struct NetworkTargetSheetView: View {
     @State private var autoDetectGateway: Bool = true
     @State private var customGatewayText: String = ""
     @State private var selectedProtocol: NetworkProbeProtocol = .auto
+    @State private var bypassVPNProbes: Bool = true
     @State private var useIPv6Probes: Bool = false
     @State private var saveTrigger: Int = 0
 
@@ -129,6 +130,13 @@ struct NetworkTargetSheetView: View {
                 }
 
                 Section(
+                    header: Text(L10n.tr("VPN & Physical Link")),
+                    footer: Text(L10n.tr("Enabled by default. Binds ICMP, UDP, and TCP probes directly to Wi-Fi or USB Ethernet so gaming/proxy VPN tunnels cannot mask real ISP packet loss while your game keeps using the VPN."))
+                ) {
+                    Toggle(L10n.tr("Bypass VPN in Network Probes"), isOn: self.$bypassVPNProbes)
+                }
+
+                Section(
                     header: Text(L10n.tr("IP Protocol Version")),
                     footer: Text(L10n.tr("Disabled by default for security and local IPv4 consistency. Turn on to allow IPv6 DNS resolution and ICMPv6/UDP/TCP probes."))
                 ) {
@@ -174,6 +182,7 @@ struct NetworkTargetSheetView: View {
                 self.loadInitialState()
             }
             .task {
+                self.bypassVPNProbes = await SwiftSensors.shared.getNetworkBypassVPN()
                 self.useIPv6Probes = await SwiftSensors.shared.getNetworkUseIPv6Probes()
             }
         }
@@ -212,10 +221,12 @@ struct NetworkTargetSheetView: View {
             : self.customGatewayText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let proto = self.selectedProtocol
+        let bypassVPN = self.bypassVPNProbes
         let allowIPv6 = self.useIPv6Probes
         self.saveTrigger += 1
 
         Task {
+            await SwiftSensors.shared.setNetworkBypassVPN(bypassVPN)
             await SwiftSensors.shared.setNetworkUseIPv6Probes(allowIPv6)
             await SwiftSensors.shared.setNetworkProbeProtocol(proto)
             await SwiftSensors.shared.setNetworkGatewayHost(gatewayOverride)

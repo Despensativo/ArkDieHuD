@@ -105,6 +105,7 @@ public struct NetworkRouteInfo: Codable, Sendable, Equatable {
     public let activeInterfaceName: String?
     public let usbEthernetIPv4: String?
     public let localIPv6: String?
+    public let isBypassingVPN: Bool
 
     public init(
         interfaceKind: String,
@@ -114,7 +115,8 @@ public struct NetworkRouteInfo: Codable, Sendable, Equatable {
         detectedGatewayIP: String? = nil,
         activeInterfaceName: String? = nil,
         usbEthernetIPv4: String? = nil,
-        localIPv6: String? = nil
+        localIPv6: String? = nil,
+        isBypassingVPN: Bool = false
     ) {
         self.interfaceKind = interfaceKind
         self.isVPNActive = isVPNActive
@@ -124,6 +126,7 @@ public struct NetworkRouteInfo: Codable, Sendable, Equatable {
         self.activeInterfaceName = activeInterfaceName
         self.usbEthernetIPv4 = usbEthernetIPv4
         self.localIPv6 = localIPv6
+        self.isBypassingVPN = isBypassingVPN
     }
 
     public static let unknown = NetworkRouteInfo(
@@ -134,15 +137,17 @@ public struct NetworkRouteInfo: Codable, Sendable, Equatable {
         detectedGatewayIP: nil,
         activeInterfaceName: nil,
         usbEthernetIPv4: nil,
-        localIPv6: nil
+        localIPv6: nil,
+        isBypassingVPN: false
     )
 
     public var summaryLabel: String {
         if self.isVPNActive {
+            let suffix = self.isBypassingVPN ? " [Link Real]" : ""
             if let vpn = self.vpnInterfaceName {
-                return "\(self.interfaceKind) + VPN (\(vpn))"
+                return "\(self.interfaceKind) + VPN (\(vpn))\(suffix)"
             }
-            return "\(self.interfaceKind) + VPN"
+            return "\(self.interfaceKind) + VPN\(suffix)"
         }
         return "\(self.interfaceKind) Direto"
     }

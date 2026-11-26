@@ -34,12 +34,14 @@ enum ICMPProber {
         host: String,
         sequence: UInt16,
         timeout: TimeInterval,
-        allowIPv6: Bool = false
+        allowIPv6: Bool = false,
+        boundInterface: String? = nil
     ) async -> Double? {
         await Self.sendDatagramAndAwaitReply(
             host: host,
             port: 0,
             allowIPv6: allowIPv6,
+            boundInterface: boundInterface,
             timeout: timeout,
             prepareSocketPayload: { resolved in
                 switch resolved {
@@ -83,7 +85,8 @@ enum ICMPProber {
         port: UInt16 = 53,
         transactionID: UInt16,
         timeout: TimeInterval,
-        allowIPv6: Bool = false
+        allowIPv6: Bool = false,
+        boundInterface: String? = nil
     ) async -> Double? {
         let query = Self.makeDNSRootNSQuery(transactionID: transactionID)
         let expectedPort = port.bigEndian
@@ -91,6 +94,7 @@ enum ICMPProber {
             host: host,
             port: port,
             allowIPv6: allowIPv6,
+            boundInterface: boundInterface,
             timeout: timeout,
             prepareSocketPayload: { _ in (IPPROTO_UDP, query) },
             matchesReply: { _, recvBuffer, count, srcPortBigEndian in
@@ -107,6 +111,7 @@ enum ICMPProber {
         host: String,
         port: UInt16,
         allowIPv6: Bool,
+        boundInterface: String? = nil,
         timeout: TimeInterval,
         prepareSocketPayload: @escaping @Sendable (ResolvedDatagramAddress) -> (ipProtocol: Int32, payload: [UInt8]),
         matchesReply: @escaping @Sendable (ResolvedDatagramAddress, [UInt8], Int, UInt16) -> Bool
@@ -116,37 +121,51 @@ enum ICMPProber {
 
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                guard let resolved = Self.resolveDatagramAddress(host: trimmedHost, allowIPv6: allowIPv6) else {
+                guard let resolved = Self.resolveDatagramAddress(
+                    host: trimmedHost,
+                    allowIPv6: allowIPv6,
+                    boundInterface: boundInterface
+                ) else {
                     continuation.resume(returning: nil)
                     return
                 }
 
                 let (ipProtocol, payload) = prepareSocketPayload(resolved)
-                let fd = socket(resolved.family, SOCK_DGRAM, ipProtocol)
-                guard fd >= 0 else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                defer { close(fd) }
-
-                var noSigPipe: Int32 = 1
-                setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
-
                 var (destStorage, destLen) = Self.makeSockAddrStorage(for: resolved, port: port)
-                let startNs = DispatchTime.now().uptimeNanoseconds
 
-                let sent = payload.withUnsafeBytes { rawBuf -> ssize_t in
-                    withUnsafePointer(to: &destStorage) { addrPtr in
-                        addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
-                            sendto(fd, rawBuf.baseAddress, rawBuf.count, 0, sockPtr, destLen)
+                func openAndSend(bindTo iface: String?) -> (fd: Int32, startNs: UInt64, sent: ssize_t, err: Int32) {
+                    let sock = socket(resolved.family, SOCK_DGRAM, ipProtocol)
+                    guard sock >= 0 else { return (-1, 0, -1, errno) }
+                    var noSigPipe: Int32 = 1
+                    _ = setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+                    Self.bindSocketToInterface(sock, family: resolved.family, interfaceName: iface)
+                    let t0 = DispatchTime.now().uptimeNanoseconds
+                    let n = payload.withUnsafeBytes { rawBuf -> ssize_t in
+                        withUnsafePointer(to: &destStorage) { addrPtr in
+                            addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                                sendto(sock, rawBuf.baseAddress, rawBuf.count, 0, sockPtr, destLen)
+                            }
                         }
                     }
+                    let sendErr = n < 0 ? errno : 0
+                    if n != payload.count {
+                        close(sock)
+                        return (-1, t0, n, sendErr)
+                    }
+                    return (sock, t0, n, 0)
                 }
 
-                guard sent == payload.count else {
+                var attempt = openAndSend(bindTo: boundInterface)
+                if attempt.fd < 0 && boundInterface != nil && (attempt.err == EPERM || attempt.err == EACCES) {
+                    attempt = openAndSend(bindTo: nil)
+                }
+                guard attempt.fd >= 0 else {
                     continuation.resume(returning: nil)
                     return
                 }
+                let fd = attempt.fd
+                let startNs = attempt.startNs
+                defer { close(fd) }
 
                 let timeoutNs = UInt64(max(0.1, timeout) * 1_000_000_000)
                 let deadlineNs = startNs &+ timeoutNs
@@ -208,7 +227,8 @@ enum ICMPProber {
         host: String,
         port: UInt16,
         timeout: TimeInterval,
-        allowIPv6: Bool = false
+        allowIPv6: Bool = false,
+        boundInterface: String? = nil
     ) async -> Double? {
         let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedHost.isEmpty, let endpointPort = NWEndpoint.Port(rawValue: port) else {
@@ -219,7 +239,26 @@ enum ICMPProber {
             return nil
         }
 
+        if let boundInterface, !boundInterface.isEmpty {
+            let boundOutcome = await Self.pingTCPBoundBSD(
+                host: trimmedHost,
+                port: port,
+                timeout: timeout,
+                allowIPv6: allowIPv6,
+                boundInterface: boundInterface
+            )
+            switch boundOutcome {
+            case .completed(let rtt):
+                return rtt
+            case .permissionBlocked:
+                break
+            }
+        }
+
         let params = NWParameters.tcp
+        if boundInterface != nil {
+            params.prohibitedInterfaceTypes = [.other, .cellular]
+        }
         if !allowIPv6, let ipOptions = params.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options {
             ipOptions.version = .v4
         }
@@ -437,13 +476,145 @@ enum ICMPProber {
 
     // MARK: - Helpers
 
+    private enum BoundTCPOutcome: Sendable {
+        case completed(Double?)
+        case permissionBlocked
+    }
+
+    /// Performs a pure kernel 3-way TCP handshake bound via IP_BOUND_IF/IPV6_BOUND_IF so userspace
+    /// VPN tunnels (utun* / tun2socks) cannot intercept and spoof local SYN-ACK replies.
+    private static func pingTCPBoundBSD(
+        host: String,
+        port: UInt16,
+        timeout: TimeInterval,
+        allowIPv6: Bool,
+        boundInterface: String
+    ) async -> BoundTCPOutcome {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                guard let resolved = Self.resolveDatagramAddress(
+                    host: host,
+                    allowIPv6: allowIPv6,
+                    boundInterface: boundInterface
+                ) else {
+                    continuation.resume(returning: .completed(nil))
+                    return
+                }
+
+                let fd = socket(resolved.family, SOCK_STREAM, IPPROTO_TCP)
+                guard fd >= 0 else {
+                    continuation.resume(returning: .completed(nil))
+                    return
+                }
+                defer { close(fd) }
+
+                var noSigPipe: Int32 = 1
+                _ = setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+                Self.bindSocketToInterface(fd, family: resolved.family, interfaceName: boundInterface)
+
+                let curFlags = fcntl(fd, F_GETFL, 0)
+                if curFlags >= 0 {
+                    _ = fcntl(fd, F_SETFL, curFlags | O_NONBLOCK)
+                }
+
+                var (destStorage, destLen) = Self.makeSockAddrStorage(for: resolved, port: port)
+                let startNs = DispatchTime.now().uptimeNanoseconds
+
+                let connectRC = withUnsafePointer(to: &destStorage) { addrPtr in
+                    addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                        connect(fd, sockPtr, destLen)
+                    }
+                }
+
+                if connectRC == 0 {
+                    let elapsed = Double(DispatchTime.now().uptimeNanoseconds - startNs) / 1_000_000.0
+                    continuation.resume(returning: .completed(elapsed))
+                    return
+                }
+
+                let err = errno
+                if err != EINPROGRESS {
+                    if err == EPERM || err == EACCES {
+                        continuation.resume(returning: .permissionBlocked)
+                    } else {
+                        continuation.resume(returning: .completed(nil))
+                    }
+                    return
+                }
+
+                let timeoutNs = UInt64(max(0.1, timeout) * 1_000_000_000)
+                let deadlineNs = startNs &+ timeoutNs
+
+                while true {
+                    let nowNs = DispatchTime.now().uptimeNanoseconds
+                    if nowNs >= deadlineNs {
+                        continuation.resume(returning: .completed(nil))
+                        return
+                    }
+
+                    let remainingMs = max(1, Int32((deadlineNs - nowNs) / 1_000_000))
+                    var pfd = pollfd(fd: fd, events: Int16(POLLOUT), revents: 0)
+                    let pollResult = poll(&pfd, 1, remainingMs)
+
+                    if pollResult == 0 {
+                        continuation.resume(returning: .completed(nil))
+                        return
+                    }
+                    if pollResult < 0 {
+                        if errno == EINTR { continue }
+                        continuation.resume(returning: .completed(nil))
+                        return
+                    }
+
+                    var soError: Int32 = 0
+                    var optLen = socklen_t(MemoryLayout<Int32>.size)
+                    guard getsockopt(fd, SOL_SOCKET, SO_ERROR, &soError, &optLen) == 0,
+                          soError == 0 else {
+                        if soError == EPERM || soError == EACCES {
+                            continuation.resume(returning: .permissionBlocked)
+                        } else {
+                            continuation.resume(returning: .completed(nil))
+                        }
+                        return
+                    }
+
+                    let elapsed = Double(DispatchTime.now().uptimeNanoseconds - startNs) / 1_000_000.0
+                    continuation.resume(returning: .completed(elapsed))
+                    return
+                }
+            }
+        }
+    }
+
+    private static func bindSocketToInterface(_ fd: Int32, family: Int32, interfaceName: String?) {
+        guard let interfaceName, !interfaceName.isEmpty else { return }
+        let index = if_nametoindex(interfaceName)
+        guard index > 0 else { return }
+        var rawIndex = Int32(index)
+        if family == AF_INET {
+            _ = setsockopt(fd, IPPROTO_IP, IP_BOUND_IF, &rawIndex, socklen_t(MemoryLayout<Int32>.size))
+        } else if family == AF_INET6 {
+            _ = setsockopt(fd, IPPROTO_IPV6, IPV6_BOUND_IF, &rawIndex, socklen_t(MemoryLayout<Int32>.size))
+        }
+    }
+
+    private static func isFakeIPv4(_ networkOrderAddr: UInt32) -> Bool {
+        // RFC 2544 198.18.0.0/15 range commonly used as Fake-IP by local VPN/proxy stacks.
+        let hostOrder = UInt32(bigEndian: networkOrderAddr)
+        return (hostOrder & 0xFFFE_0000) == 0xC612_0000
+    }
+
     private static func isIPv6Literal(_ host: String) -> Bool {
         let base = host.split(separator: "%", maxSplits: 1).first.map(String.init) ?? host
         var addr6 = in6_addr()
         return inet_pton(AF_INET6, base, &addr6) == 1
     }
 
-    private static func resolveDatagramAddress(host: String, allowIPv6: Bool) -> ResolvedDatagramAddress? {
+    private static func resolveDatagramAddress(
+        host: String,
+        allowIPv6: Bool,
+        boundInterface: String? = nil
+    ) -> ResolvedDatagramAddress? {
         var direct4 = in_addr()
         if inet_pton(AF_INET, host, &direct4) == 1 {
             return .v4(direct4.s_addr)
@@ -461,7 +632,8 @@ enum ICMPProber {
             return nil
         }
 
-        let cacheKey = "\(host)|\(allowIPv6 ? 6 : 4)"
+        let cacheScope = (boundInterface?.isEmpty == false) ? "direct:\(boundInterface!)" : "sys"
+        let cacheKey = "\(host)|\(allowIPv6 ? 6 : 4)|\(cacheScope)"
         if let cached = self.dnsCache.withLock({ $0[cacheKey] }) {
             return cached
         }
@@ -471,29 +643,151 @@ enum ICMPProber {
         hints.ai_socktype = SOCK_DGRAM
 
         var res: UnsafeMutablePointer<addrinfo>?
-        guard getaddrinfo(host, nil, &hints, &res) == 0, let first = res else {
-            return nil
-        }
-        defer { freeaddrinfo(res) }
+        if getaddrinfo(host, nil, &hints, &res) == 0, let first = res {
+            defer { freeaddrinfo(res) }
 
-        var firstV4: ResolvedDatagramAddress?
-        var cursor: UnsafeMutablePointer<addrinfo>? = first
-        while let entry = cursor {
-            if entry.pointee.ai_family == AF_INET6, allowIPv6, let addr = entry.pointee.ai_addr {
-                let sin6 = addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
-                let resolved = ResolvedDatagramAddress.v6(sin6.sin6_addr, scopeID: sin6.sin6_scope_id)
+            var firstV4: UInt32?
+            var cursor: UnsafeMutablePointer<addrinfo>? = first
+            while let entry = cursor {
+                if entry.pointee.ai_family == AF_INET6, allowIPv6, let addr = entry.pointee.ai_addr {
+                    let sin6 = addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
+                    let resolved = ResolvedDatagramAddress.v6(sin6.sin6_addr, scopeID: sin6.sin6_scope_id)
+                    self.dnsCache.withLock { $0[cacheKey] = resolved }
+                    return resolved
+                } else if entry.pointee.ai_family == AF_INET, firstV4 == nil, let addr = entry.pointee.ai_addr {
+                    let sin = addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
+                    firstV4 = sin.sin_addr.s_addr
+                }
+                cursor = entry.pointee.ai_next
+            }
+
+            if let addr4 = firstV4 {
+                if let iface = boundInterface, !iface.isEmpty, Self.isFakeIPv4(addr4),
+                   let realAddr4 = Self.resolveIPv4ViaDirectDNS(hostname: host, boundInterface: iface) {
+                    let resolved = ResolvedDatagramAddress.v4(realAddr4)
+                    self.dnsCache.withLock { $0[cacheKey] = resolved }
+                    return resolved
+                }
+                let resolved = ResolvedDatagramAddress.v4(addr4)
                 self.dnsCache.withLock { $0[cacheKey] = resolved }
                 return resolved
-            } else if entry.pointee.ai_family == AF_INET, firstV4 == nil, let addr = entry.pointee.ai_addr {
-                let sin = addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
-                firstV4 = .v4(sin.sin_addr.s_addr)
             }
-            cursor = entry.pointee.ai_next
+        } else if let iface = boundInterface, !iface.isEmpty,
+                  let realAddr4 = Self.resolveIPv4ViaDirectDNS(hostname: host, boundInterface: iface) {
+            let resolved = ResolvedDatagramAddress.v4(realAddr4)
+            self.dnsCache.withLock { $0[cacheKey] = resolved }
+            return resolved
         }
 
-        if let firstV4 {
-            self.dnsCache.withLock { $0[cacheKey] = firstV4 }
-            return firstV4
+        return nil
+    }
+
+    /// Resolves an IPv4 A record directly over the physical interface (1.1.1.1 / 8.8.8.8) when
+    /// a local VPN intercepts system DNS with RFC 2544 Fake-IP addresses (198.18.0.0/15).
+    private static func resolveIPv4ViaDirectDNS(hostname: String, boundInterface: String) -> UInt32? {
+        let labels = hostname.trimmingCharacters(in: CharacterSet(charactersIn: ".")).split(separator: ".")
+        guard !labels.isEmpty else { return nil }
+
+        let txID = UInt16.random(in: 1...65534)
+        var query: [UInt8] = [
+            UInt8(txID >> 8), UInt8(txID & 0xFF),
+            0x01, 0x00,
+            0x00, 0x01,
+            0x00, 0x00,
+            0x00, 0x00,
+            0x00, 0x00,
+        ]
+        for label in labels {
+            let utf8 = Array(label.utf8)
+            guard !utf8.isEmpty, utf8.count <= 63 else { return nil }
+            query.append(UInt8(utf8.count))
+            query.append(contentsOf: utf8)
+        }
+        query.append(contentsOf: [0x00, 0x00, 0x01, 0x00, 0x01]) // QTYPE=A, QCLASS=IN
+
+        for resolver in ["1.1.1.1", "8.8.8.8"] {
+            var resolverAddr = in_addr()
+            guard inet_pton(AF_INET, resolver, &resolverAddr) == 1 else { continue }
+            let fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+            guard fd >= 0 else { continue }
+            defer { close(fd) }
+
+            var noSigPipe: Int32 = 1
+            _ = setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+            Self.bindSocketToInterface(fd, family: AF_INET, interfaceName: boundInterface)
+
+            var (destStorage, destLen) = Self.makeSockAddrStorage(for: .v4(resolverAddr.s_addr), port: 53)
+            let sent = query.withUnsafeBytes { rawBuf -> ssize_t in
+                withUnsafePointer(to: &destStorage) { addrPtr in
+                    addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                        sendto(fd, rawBuf.baseAddress, rawBuf.count, 0, sockPtr, destLen)
+                    }
+                }
+            }
+            guard sent == query.count else { continue }
+
+            var pfd = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+            guard poll(&pfd, 1, 500) > 0 else { continue }
+
+            var buf = [UInt8](repeating: 0, count: 512)
+            let n = buf.withUnsafeMutableBytes { rawBuf -> ssize_t in
+                recv(fd, rawBuf.baseAddress, rawBuf.count, 0)
+            }
+            guard n >= 12 else { continue }
+            let replyID = (UInt16(buf[0]) << 8) | UInt16(buf[1])
+            guard replyID == txID, (buf[2] & 0x80) != 0 else { continue }
+            let qdCount = Int((UInt16(buf[4]) << 8) | UInt16(buf[5]))
+            let anCount = Int((UInt16(buf[6]) << 8) | UInt16(buf[7]))
+            guard anCount > 0 else { continue }
+
+            var offset = 12
+            func skipName(_ pos: inout Int) -> Bool {
+                var jumps = 0
+                while pos < n && jumps < 16 {
+                    let len = Int(buf[pos])
+                    if len == 0 {
+                        pos += 1
+                        return true
+                    }
+                    if (len & 0xC0) == 0xC0 {
+                        guard pos + 1 < n else { return false }
+                        pos += 2
+                        return true
+                    }
+                    pos += 1 + len
+                    jumps += 1
+                }
+                return false
+            }
+
+            var validParse = true
+            for _ in 0..<qdCount {
+                guard skipName(&offset), offset + 4 <= n else { validParse = false; break }
+                offset += 4
+            }
+            guard validParse else { continue }
+
+            for _ in 0..<anCount {
+                guard skipName(&offset), offset + 10 <= n else { break }
+                let rtype = (UInt16(buf[offset]) << 8) | UInt16(buf[offset + 1])
+                let rclass = (UInt16(buf[offset + 2]) << 8) | UInt16(buf[offset + 3])
+                let rdLength = Int((UInt16(buf[offset + 8]) << 8) | UInt16(buf[offset + 9]))
+                offset += 10
+                guard offset + rdLength <= n else { break }
+                if rtype == 1 && rclass == 1 && rdLength == 4 {
+                    var ipv4NetOrder: UInt32 = 0
+                    withUnsafeMutableBytes(of: &ipv4NetOrder) { dst in
+                        dst[0] = buf[offset]
+                        dst[1] = buf[offset + 1]
+                        dst[2] = buf[offset + 2]
+                        dst[3] = buf[offset + 3]
+                    }
+                    if !Self.isFakeIPv4(ipv4NetOrder) {
+                        return ipv4NetOrder
+                    }
+                }
+                offset += rdLength
+            }
         }
         return nil
     }

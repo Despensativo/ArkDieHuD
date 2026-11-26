@@ -350,6 +350,7 @@ const I18N = {
     pageTitle: "ArkDieHuD — Live Telemetry",
     connecting: "Connecting...",
     direct: "Direct",
+    realLink: "Real Link",
     downloadCSV: "Download CSV",
     metalHudTitle: "Apple Metal FPS HUD Launcher (Mac & Windows)",
     metalHudDesc: "Enable Apple's official real-time FPS / GPU / Frame Time overlay inside any game or app on your iPhone/iPad (works over Wi-Fi or USB on macOS; USB on Windows).",
@@ -447,6 +448,7 @@ const I18N = {
     pageTitle: "ArkDieHuD — Telemetria Ao Vivo",
     connecting: "Conectando...",
     direct: "Direto",
+    realLink: "Link Real",
     downloadCSV: "Baixar CSV",
     metalHudTitle: "Launcher Apple Metal FPS HUD (Mac e Windows)",
     metalHudDesc: "Ative o contador oficial da Apple (FPS / GPU / Frame Time) dentro de qualquer jogo ou app no iPhone/iPad (funciona via Wi-Fi ou USB no macOS; USB no Windows).",
@@ -536,6 +538,7 @@ const I18N = {
     pageTitle: "ArkDieHuD — Telemetría en Vivo",
     connecting: "Conectando...",
     direct: "Directo",
+    realLink: "Enlace Real",
     downloadCSV: "Descargar CSV",
     metalHudTitle: "Launcher Apple Metal FPS HUD (Mac y Windows)",
     metalHudDesc: "Activa el contador oficial de Apple (FPS / GPU / Frame Time) dentro de cualquier juego o app en tu iPhone/iPad (funciona por Wi-Fi o USB en macOS; USB en Windows).",
@@ -884,7 +887,10 @@ function renderKPIs(d) {
 
   const route = net.route || {};
   const ifaceSuffix = route.activeInterfaceName ? ` (${route.activeInterfaceName})` : "";
-  document.getElementById("routeBadge").textContent = (route.interfaceKind || "Wi-Fi") + ifaceSuffix + (route.isVPNActive ? " + VPN" : " " + s.direct);
+  const vpnSuffix = route.isVPNActive
+    ? (route.isBypassingVPN ? ` + VPN (${s.realLink})` : " + VPN")
+    : " " + s.direct;
+  document.getElementById("routeBadge").textContent = (route.interfaceKind || "Wi-Fi") + ifaceSuffix + vpnSuffix;
   document.getElementById("slaBadge").textContent = "P50 " + fmt0(net.p50Ms) + "ms • P95 " + fmt0(net.p95Ms) + "ms • P99 " + fmt0(net.p99Ms) + "ms";
 }
 
